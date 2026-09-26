@@ -1,0 +1,89 @@
+'use client';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import api from '@/lib/api';
+
+export default function CouponsPage() {
+  const [coupons, setCoupons] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadCoupons() {
+      try {
+        const res = await api.get('/admin/coupons');
+        if (res.success) setCoupons(res.data?.coupons || res.data || []);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadCoupons();
+  }, []);
+
+  return (
+    <>
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Coupons & Promo Codes</h1>
+          <p className="text-slate-500 text-sm">Manage single-use and bulk promotional coupons</p>
+        </div>
+        <div className="flex gap-3">
+          <Link
+            href="/coupons/bulk-generate"
+            className="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900 transition"
+          >
+            Bulk Generate
+          </Link>
+          <Link
+            href="/coupons/new"
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition"
+          >
+            + New Coupon
+          </Link>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center text-slate-500">Loading coupons...</div>
+        ) : coupons.length === 0 ? (
+          <div className="p-8 text-center text-slate-500">No coupons created yet.</div>
+        ) : (
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase font-semibold text-slate-600">
+                <th className="p-4">Code</th>
+                <th className="p-4">Discount</th>
+                <th className="p-4">Usage Limit</th>
+                <th className="p-4">Used Count</th>
+                <th className="p-4">Expiry</th>
+                <th className="p-4">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-sm">
+              {coupons.map((c) => (
+                <tr key={c.id} className="hover:bg-slate-50">
+                  <td className="p-4 font-mono font-bold text-indigo-600">{c.code}</td>
+                  <td className="p-4">
+                    {c.discount_type === 'percentage' ? `${c.discount_value}%` : `₹${c.discount_value}`}
+                  </td>
+                  <td className="p-4">{c.usage_limit || 'Unlimited'}</td>
+                  <td className="p-4 font-medium">{c.used_count || 0}</td>
+                  <td className="p-4 text-slate-500">
+                    {c.expires_at ? new Date(c.expires_at).toLocaleDateString() : 'Never'}
+                  </td>
+                  <td className="p-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${c.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
+                      {c.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </>
+  );
+}
