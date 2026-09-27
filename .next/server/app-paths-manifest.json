@@ -1,7 +1,7 @@
 {
-  "/products/page": "app/products/page.js",
+  "/settings/cache/page": "app/settings/cache/page.js",
+  "/page": "app/page.js",
   "/homepage-layout/page": "app/homepage-layout/page.js",
-  "/products/new/page": "app/products/new/page.js",
-  "/products/[id]/edit/page": "app/products/[id]/edit/page.js",
-  "/section-tags/page": "app/section-tags/page.js"
+  "/staff/page": "app/staff/page.js",
+  "/staff/new/page": "app/staff/new/page.js"
 }

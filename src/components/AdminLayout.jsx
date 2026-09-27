@@ -7,7 +7,7 @@ import { useAdminAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, ShoppingBag, Package, Layers, Tag, CreditCard,
   Percent, Users, Briefcase, Award, Truck, BarChart3, ShieldCheck,
-  Activity, MessageSquare, Database, LogOut, Star
+  Activity, MessageSquare, Database, LogOut, Star, Search
 } from 'lucide-react';
 
 export default function AdminLayout({ children }) {
@@ -59,6 +59,7 @@ export default function AdminLayout({ children }) {
     { label: 'Activity Audit Log', href: '/activity-log', icon: Activity },
     { label: 'SMS Admin', href: '/settings/sms', icon: MessageSquare },
     { label: 'Redis Cache', href: '/settings/cache', icon: Database },
+    { label: 'Search Settings', href: '/settings/search', icon: Search },
   ];
 
   return (
