@@ -342,7 +342,7 @@ export default function AdminOrderDetailPage() {
           <h3 className="font-bold text-slate-900 text-base border-b border-slate-100 pb-3">Order Documents</h3>
           <div className="space-y-2">
             <a
-              href={`http://72.60.219.181:46711/api/v1/orders/${order.id}/invoice`}
+              href={`http://localhost:46711/api/v1/orders/${order.id}/invoice`}
               target="_blank"
               rel="noreferrer"
               className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition"
@@ -350,7 +350,7 @@ export default function AdminOrderDetailPage() {
               <Download size={14} /> Download Tax Invoice (HTML/PDF)
             </a>
             <a
-              href={`http://72.60.219.181:46711/api/v1/admin/orders/${order.id}/packing-slip`}
+              href={`http://localhost:46711/api/v1/admin/orders/${order.id}/packing-slip`}
               target="_blank"
               rel="noreferrer"
               className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition"

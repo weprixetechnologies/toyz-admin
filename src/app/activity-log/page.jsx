@@ -11,7 +11,9 @@ export default function ActivityLogPage() {
     async function loadLogs() {
       try {
         const res = await api.get('/admin/activity-log');
-        if (res.success) setLogs(res.data || []);
+        if (res.success) {
+          setLogs(res.data?.logs || res.data || []);
+        }
       } catch (err) {
         console.error(err);
       } finally {

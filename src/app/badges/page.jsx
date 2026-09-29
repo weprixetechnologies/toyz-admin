@@ -137,7 +137,8 @@ export default function BadgesPage() {
       text_color: form.text_color,
       description: form.description?.trim() || null,
       is_active: form.is_active ? 1 : 0,
-      product_ids: form.product_ids
+      product_ids: form.product_ids,
+      override_others: overrideOthers
     };
 
     let res;
@@ -150,7 +151,9 @@ export default function BadgesPage() {
     if (res.success) {
       toast.success(editingBadge ? 'Badge updated successfully' : 'Badge created successfully');
       setIsModalOpen(false);
+      setOverrideOthers(false);
       fetchBadges();
+      fetchProducts(); // Refresh products to get updated badges
     } else {
       toast.error(res.message || 'Operation failed');
     }
@@ -159,13 +162,16 @@ export default function BadgesPage() {
   async function handleSaveAssignments() {
     if (!assignModalBadge) return;
     const res = await adminApi.post(`/badges/${assignModalBadge.id}/products`, {
-      product_ids: assignProductIds
+      product_ids: assignProductIds,
+      override_others: overrideOthers
     });
 
     if (res.success) {
       toast.success('Assigned products updated successfully!');
       setAssignModalBadge(null);
+      setOverrideOthers(false);
       fetchBadges();
+      fetchProducts(); // Refresh products to get updated badges
     } else {
       toast.error(res.message || 'Failed to update assigned products');
     }
@@ -183,9 +189,26 @@ export default function BadgesPage() {
     }
   }
 
+  const [overrideOthers, setOverrideOthers] = useState(false);
+
+  const checkOverride = (prod, currentBadgeId) => {
+    if (!prod.badges || prod.badges.length === 0) return true;
+    const hasOther = prod.badges.some(b => b.id !== currentBadgeId);
+    if (hasOther) {
+      const confirmOverride = window.confirm(`"${prod.name}" already has badges attached. Do you want to OVERRIDE them? (Clicking OK will remove its old badges when saving).`);
+      if (confirmOverride) {
+        setOverrideOthers(true);
+      }
+      return true; // we allow selection either way, but overrideOthers is set if they want it
+    }
+    return true;
+  };
+
   const toggleProductSelect = (productId) => {
+    const prod = allProducts.find(p => p.id === productId);
     setForm(prev => {
       const exists = prev.product_ids.includes(productId);
+      if (!exists && prod) checkOverride(prod, editingBadge?.id);
       return {
         ...prev,
         product_ids: exists
@@ -196,11 +219,14 @@ export default function BadgesPage() {
   };
 
   const toggleAssignProductSelect = (productId) => {
-    setAssignProductIds(prev =>
-      prev.includes(productId)
+    const prod = allProducts.find(p => p.id === productId);
+    setAssignProductIds(prev => {
+      const exists = prev.includes(productId);
+      if (!exists && prod) checkOverride(prod, assignModalBadge?.id);
+      return exists
         ? prev.filter(id => id !== productId)
-        : [...prev, productId]
-    );
+        : [...prev, productId];
+    });
   };
 
   const filteredBadges = badges.filter(b =>
@@ -530,7 +556,7 @@ export default function BadgesPage() {
                   />
                 </div>
 
-                <div className="border border-slate-200 rounded-xl max-h-48 overflow-y-auto divide-y divide-slate-100 bg-slate-50/50">
+                <div className="border border-slate-200 rounded-xl max-h-64 p-3 overflow-y-auto bg-slate-50/50 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {filteredFormProducts.length > 0 ? (
                     filteredFormProducts.map(prod => {
                       const isSelected = form.product_ids.includes(prod.id);
@@ -538,25 +564,42 @@ export default function BadgesPage() {
                         <div
                           key={prod.id}
                           onClick={() => toggleProductSelect(prod.id)}
-                          className={`p-2.5 flex items-center justify-between cursor-pointer transition text-xs ${
-                            isSelected ? 'bg-sky-50 font-bold text-sky-900' : 'hover:bg-slate-100 text-slate-700'
+                          className={`p-3 rounded-lg flex flex-col gap-2 cursor-pointer transition border ${
+                            isSelected ? 'bg-sky-50 border-sky-300 ring-1 ring-sky-500' : 'bg-white border-slate-200 hover:border-slate-300'
                           }`}
                         >
-                          <div className="flex items-center gap-2 truncate">
-                            {isSelected ? (
-                              <CheckSquare size={16} className="text-sky-600 flex-shrink-0" />
-                            ) : (
-                              <Square size={16} className="text-slate-400 flex-shrink-0" />
-                            )}
-                            <span className="truncate">{prod.name}</span>
-                            <span className="text-[10px] text-slate-400 font-mono">({prod.sku})</span>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-2">
+                              {isSelected ? (
+                                <CheckSquare size={16} className="text-sky-600 flex-shrink-0" />
+                              ) : (
+                                <Square size={16} className="text-slate-300 flex-shrink-0" />
+                              )}
+                              <span className={`text-xs font-bold line-clamp-1 ${isSelected ? 'text-sky-900' : 'text-slate-700'}`}>
+                                {prod.name}
+                              </span>
+                            </div>
+                            <span className="text-[11px] font-bold text-slate-500">₹{parseFloat(prod.base_price || 0).toLocaleString('en-IN')}</span>
                           </div>
-                          <span className="text-[11px] font-bold text-slate-600">₹{parseFloat(prod.base_price || 0).toLocaleString('en-IN')}</span>
+                          
+                          <div className="flex items-center justify-between pl-6">
+                            <span className="text-[10px] text-slate-400 font-mono">SKU: {prod.sku}</span>
+                            {/* Display existing badges */}
+                            {prod.badges && prod.badges.length > 0 && (
+                              <div className="flex gap-1">
+                                {prod.badges.map(b => (
+                                  <span key={b.id} className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded shadow-sm" style={{ backgroundColor: b.bg_color, color: b.text_color }}>
+                                    {b.badge_text}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       );
                     })
                   ) : (
-                    <div className="p-4 text-center text-slate-400 text-xs">No matching products</div>
+                    <div className="p-4 col-span-full text-center text-slate-400 text-xs">No matching products</div>
                   )}
                 </div>
               </div>
@@ -641,30 +684,50 @@ export default function BadgesPage() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100 bg-slate-50/50">
+              <div className="flex-1 overflow-y-auto border border-slate-200 rounded-xl p-3 bg-slate-50/50 grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96">
                 {filteredAssignProducts.map(prod => {
                   const isSelected = assignProductIds.includes(prod.id);
                   return (
                     <div
                       key={prod.id}
                       onClick={() => toggleAssignProductSelect(prod.id)}
-                      className={`p-3 flex items-center justify-between cursor-pointer transition text-xs ${
-                        isSelected ? 'bg-sky-50 font-bold text-sky-900' : 'hover:bg-slate-100 text-slate-700'
+                      className={`p-3 rounded-lg flex flex-col gap-2 cursor-pointer transition border ${
+                        isSelected ? 'bg-sky-50 border-sky-300 ring-1 ring-sky-500' : 'bg-white border-slate-200 hover:border-slate-300'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5 truncate">
-                        {isSelected ? (
-                          <CheckSquare size={16} className="text-sky-600 flex-shrink-0" />
-                        ) : (
-                          <Square size={16} className="text-slate-400 flex-shrink-0" />
-                        )}
-                        <span className="truncate">{prod.name}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">({prod.sku})</span>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          {isSelected ? (
+                            <CheckSquare size={16} className="text-sky-600 flex-shrink-0" />
+                          ) : (
+                            <Square size={16} className="text-slate-300 flex-shrink-0" />
+                          )}
+                          <span className={`text-xs font-bold line-clamp-1 ${isSelected ? 'text-sky-900' : 'text-slate-700'}`}>
+                            {prod.name}
+                          </span>
+                        </div>
+                        <span className="text-[11px] font-bold text-slate-500">₹{parseFloat(prod.base_price || 0).toLocaleString('en-IN')}</span>
                       </div>
-                      <span className="text-[11px] font-bold text-slate-600">₹{parseFloat(prod.base_price || 0).toLocaleString('en-IN')}</span>
+                      
+                      <div className="flex items-center justify-between pl-6">
+                        <span className="text-[10px] text-slate-400 font-mono">SKU: {prod.sku}</span>
+                        {/* Display existing badges */}
+                        {prod.badges && prod.badges.length > 0 && (
+                          <div className="flex gap-1">
+                            {prod.badges.map(b => (
+                              <span key={b.id} className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded shadow-sm" style={{ backgroundColor: b.bg_color, color: b.text_color }}>
+                                {b.badge_text}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
+                {filteredAssignProducts.length === 0 && (
+                  <div className="p-4 col-span-full text-center text-slate-400 text-xs">No matching products</div>
+                )}
               </div>
             </div>
 

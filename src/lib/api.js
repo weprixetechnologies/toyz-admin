@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://72.60.219.181:46711/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:46711/api/v1';
 
 export function getAdminToken() {
   if (typeof window !== 'undefined') {

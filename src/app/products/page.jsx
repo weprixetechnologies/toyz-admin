@@ -44,7 +44,7 @@ export default function AdminProductsPage() {
   };
 
   const handleExportCsv = async () => {
-    window.open('http://72.60.219.181:46711/api/v1/products/export', '_blank');
+    window.open('http://localhost:46711/api/v1/products/export', '_blank');
   };
 
   return (

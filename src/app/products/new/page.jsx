@@ -192,6 +192,32 @@ function VariantsTab({ variants, setVariants }) {
     setUploading(u => ({ ...u, [key]: false }));
   };
 
+  const [bulkAction, setBulkAction] = useState('update_base_price');
+  const [bulkValue, setBulkValue] = useState('');
+
+  const handleBulkApply = () => {
+    if (!bulkValue || isNaN(bulkValue)) return alert('Enter a valid number for bulk action.');
+    const val = parseFloat(bulkValue);
+
+    setVariants(vs => vs.map(v => {
+      let nv = { ...v };
+      const currPrice = parseFloat(nv.price) || 0;
+      const currSale = parseFloat(nv.sale_price) || 0;
+
+      switch (bulkAction) {
+        case 'update_base_price': nv.price = val; break;
+        case 'update_sale_price': nv.sale_price = val; break;
+        case 'update_stock': nv.stock_qty = Math.round(val); break;
+        case 'increase_base_pct': nv.price = (currPrice + (currPrice * val / 100)).toFixed(2); break;
+        case 'decrease_base_pct': nv.price = (currPrice - (currPrice * val / 100)).toFixed(2); break;
+        case 'increase_sale_pct': nv.sale_price = (currSale + (currSale * val / 100)).toFixed(2); break;
+        case 'decrease_sale_pct': nv.sale_price = (currSale - (currSale * val / 100)).toFixed(2); break;
+      }
+      return nv;
+    }));
+    setBulkValue('');
+  };
+
   return (
     <div className="space-y-6">
       {/* Attribute Groups Builder */}
@@ -240,7 +266,23 @@ function VariantsTab({ variants, setVariants }) {
       {/* Variant Rows Table */}
       {variants.length > 0 && (
         <div>
-          <h3 className="font-bold text-gray-800 text-sm mb-3">{variants.length} Variants Generated</h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
+            <h3 className="font-bold text-gray-800 text-sm">{variants.length} Variants Generated</h3>
+            <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200">
+              <span className="text-[10px] font-bold text-gray-500 uppercase">Bulk Update:</span>
+              <select value={bulkAction} onChange={e => setBulkAction(e.target.value)} className="text-xs p-1.5 border border-gray-200 rounded focus:outline-none focus:border-sky-500">
+                <option value="update_base_price">Update Base Price (Flat)</option>
+                <option value="update_sale_price">Update Sale Price (Flat)</option>
+                <option value="update_stock">Update Stock Qty (Flat)</option>
+                <option value="increase_base_pct">Increase Base Price by %</option>
+                <option value="decrease_base_pct">Decrease Base Price by %</option>
+                <option value="increase_sale_pct">Increase Sale Price by %</option>
+                <option value="decrease_sale_pct">Decrease Sale Price by %</option>
+              </select>
+              <input type="number" value={bulkValue} onChange={e => setBulkValue(e.target.value)} placeholder="Value" className="w-20 text-xs p-1.5 border border-gray-200 rounded focus:outline-none focus:border-sky-500" />
+              <button type="button" onClick={handleBulkApply} className="bg-slate-800 text-white text-[10px] font-bold px-3 py-1.5 rounded hover:bg-slate-900 transition">Apply</button>
+            </div>
+          </div>
           <div className="border border-gray-200 rounded-xl overflow-hidden">
             <table className="w-full text-xs">
               <thead className="bg-gray-50 text-gray-500">

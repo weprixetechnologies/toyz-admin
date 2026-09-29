@@ -118,6 +118,21 @@ export default function CustomersAndResellersPage() {
     }
   }
 
+  async function handleChangeRole(userId, newRole) {
+    if (!confirm(`Are you sure you want to change this user's role to ${newRole}?`)) return;
+
+    const res = await adminApi.put(`/users/${userId}`, { role: newRole });
+    if (res.success) {
+      toast.success('User role updated successfully');
+      fetchUsers();
+      if (selectedUser?.id === userId) {
+        setSelectedUser(prev => ({ ...prev, role: newRole }));
+      }
+    } else {
+      toast.error(res.message || 'Failed to update role');
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Top Header */}
@@ -580,6 +595,26 @@ export default function CustomersAndResellersPage() {
                       <span className="text-slate-500">Registration Date:</span>
                       <span className="font-bold text-slate-900">{new Date(selectedUser.created_at).toLocaleString('en-IN')}</span>
                     </div>
+                  </div>
+                </div>
+
+                {/* Role Management */}
+                <div className="space-y-3 bg-white p-4 rounded-xl border border-slate-200">
+                  <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Role Management</h5>
+                  <div className="text-xs">
+                    <label className="block text-slate-500 mb-1">Change User Role:</label>
+                    <select
+                      value={selectedUser.role || 'customer'}
+                      onChange={(e) => handleChangeRole(selectedUser.id, e.target.value)}
+                      className="w-full p-2 border border-slate-200 rounded-xl text-xs bg-slate-50 font-semibold focus:outline-none focus:border-sky-500"
+                    >
+                      <option value="customer">Customer</option>
+                      <option value="retailer">Reseller / Retailer</option>
+                      <option value="admin">Admin</option>
+                      <option value="superadmin">Superadmin</option>
+                      <option value="inventory_manager">Inventory Manager</option>
+                      <option value="support_agent">Support Agent</option>
+                    </select>
                   </div>
                 </div>
 
