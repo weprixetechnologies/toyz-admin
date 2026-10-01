@@ -73,7 +73,7 @@ export default function BannersPage() {
         const { uploadUrl, fileUrl } = res.data;
 
         // Use raw fetch for PUTting the binary file
-        const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://72.60.219.181:46711/api/v1';
+        const baseURL = process.env.NEXT_PUBLIC_API_URL || 'https://backend.provokeplaytech.com/api/v1';
         const fullUrl = uploadUrl.startsWith('http') ? uploadUrl : baseURL.replace('/api/v1', '') + uploadUrl;
 
         const token = localStorage.getItem('token');
