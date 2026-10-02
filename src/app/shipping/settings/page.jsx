@@ -1,10 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
+import Link from 'next/link';
 
 export default function ShippingSettingsPage() {
   const [appliesTo, setAppliesTo] = useState('all'); // all or customer_only
   const [globalFee, setGlobalFee] = useState('50');
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState('999');
   const [dispatchNote, setDispatchNote] = useState('Shipped within 2-3 business days');
   const [saving, setSaving] = useState(false);
 
@@ -17,6 +19,7 @@ export default function ShippingSettingsPage() {
           res.data.settings.forEach(s => dict[s.setting_key] = s.setting_value);
           if (dict.shipping_applies_to) setAppliesTo(dict.shipping_applies_to);
           if (dict.global_shipping_fee) setGlobalFee(dict.global_shipping_fee);
+          if (dict.free_shipping_threshold) setFreeShippingThreshold(dict.free_shipping_threshold);
           if (dict.dispatch_note) setDispatchNote(dict.dispatch_note);
         }
       } catch (err) {
@@ -30,7 +33,7 @@ export default function ShippingSettingsPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await api.put('/admin/settings', { settings: { shipping_applies_to: appliesTo, global_shipping_fee: globalFee, dispatch_note: dispatchNote } });
+      const res = await api.put('/admin/settings', { settings: { shipping_applies_to: appliesTo, global_shipping_fee: globalFee, free_shipping_threshold: freeShippingThreshold, dispatch_note: dispatchNote } });
       if (res.success) alert('Shipping rules saved!');
     } catch (err) {
       alert(err.message || 'Failed to save settings');
@@ -80,8 +83,20 @@ export default function ShippingSettingsPage() {
           </div>
           <div className="pt-4">
             <label className="block text-sm font-medium mb-2 text-slate-800">Global Fallback Shipping Fee (₹)</label>
-            <p className="text-xs text-slate-500 mb-2">Applied to normal orders if pincode matches no preset label.</p>
+            <p className="text-xs text-slate-500 mb-2">Applied when no exact pincode rate matches.</p>
             <input type="number" value={globalFee} onChange={e => setGlobalFee(e.target.value)} className="w-full p-2 border rounded-lg text-sm" />
+          </div>
+
+          <div className="pt-4">
+            <label className="block text-sm font-medium mb-2 text-slate-800">Free Shipping Above (₹)</label>
+            <p className="text-xs text-slate-500 mb-2">Orders at or above this subtotal use ₹0 shipping. Set 0 to disable.</p>
+            <input type="number" min="0" value={freeShippingThreshold} onChange={e => setFreeShippingThreshold(e.target.value)} className="w-full p-2 border rounded-lg text-sm" />
+          </div>
+
+          <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-900">
+            <p className="font-semibold">Pincode pricing</p>
+            <p className="mt-1 text-xs text-indigo-700">Add exact 6-digit pincode rates from Shipping Presets. Unmatched pincodes use the fallback fee above.</p>
+            <Link href="/shipping/presets" className="inline-block mt-2 font-semibold text-indigo-700 hover:underline">Open Pincode Presets →</Link>
           </div>
 
           <div className="pt-4">

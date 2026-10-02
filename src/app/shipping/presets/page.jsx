@@ -117,7 +117,7 @@ export default function ShippingPresetsPage() {
           {loading ? (
             <div className="p-8 text-center text-slate-500">Loading presets...</div>
           ) : presets.length === 0 ? (
-            <div className="p-8 text-center text-slate-500">No shipping options configured yet. (Defaulting to Free Shipping)</div>
+            <div className="p-8 text-center text-slate-500">No pincode rates configured yet. Unmatched pincodes use the global fallback fee from Shipping Settings.</div>
           ) : (
             <table className="w-full text-left border-collapse">
               <thead>
@@ -132,7 +132,7 @@ export default function ShippingPresetsPage() {
                 {presets.map((p) => (
                   <tr key={p.id} className="hover:bg-slate-50">
                     <td className="p-4 font-bold text-slate-800">{p.label}</td>
-                    <td className="p-4 font-bold text-emerald-700">{p.cost === 0 ? 'FREE' : `₹${p.cost}`}</td>
+                    <td className="p-4 font-bold text-emerald-700">{Number(p.cost) === 0 ? 'FREE' : `₹${p.cost}`}</td>
                     <td className="p-4 text-slate-600">{p.estimated_days || 'Standard'}</td>
                     <td className="p-4">
                       <button
