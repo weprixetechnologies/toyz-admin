@@ -25,6 +25,10 @@ export default function ShippingPresetsPage() {
 
   const handleCreate = async (e) => {
     e.preventDefault();
+    if (!/^\d{6}$/.test(form.label.trim())) {
+      alert('Enter a valid 6-digit pincode.');
+      return;
+    }
     setSaving(true);
     try {
       const res = await api.post('/admin/shipping/presets', {
@@ -66,16 +70,17 @@ export default function ShippingPresetsPage() {
           <h2 className="text-lg font-bold text-slate-800 mb-4">Add Shipping Preset</h2>
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Preset Label</label>
+              <label className="block text-sm font-medium mb-1">Pincode</label>
               <input
                 type="text"
-                placeholder="e.g. Express Delivery"
+                placeholder="e.g. 700090"
                 value={form.label}
                 onChange={(e) => setForm({ ...form, label: e.target.value })}
                 className="w-full border rounded px-3 py-2 text-sm"
                 required
               />
             </div>
+            <p className="text-[11px] text-slate-500">Use the exact 6-digit pincode as the label. Orders without a matching pincode use the global fallback fee.</p>
             <div>
               <label className="block text-sm font-medium mb-1">Shipping Cost (₹)</label>
               <input
