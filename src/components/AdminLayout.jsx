@@ -7,7 +7,7 @@ import { useAdminAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, ShoppingBag, Package, Layers, Tag, CreditCard,
   Percent, Users, Briefcase, Award, Truck, BarChart3, ShieldCheck,
-  Activity, MessageSquare, Database, LogOut, Star, Search, PanelBottom, PanelTop
+  Activity, MessageSquare, Database, LogOut, Star, Search, PanelBottom, PanelTop, BookOpen
 } from 'lucide-react';
 
 export default function AdminLayout({ children }) {
@@ -41,6 +41,7 @@ export default function AdminLayout({ children }) {
     { label: 'Products Catalog', href: '/products', icon: ShoppingBag },
     { label: 'CSV Import', href: '/products/import', icon: Layers },
     { label: 'Banners', href: '/banners', icon: Layers },
+    { label: 'Blogs & Articles', href: '/blogs', icon: BookOpen },
     { label: 'Section Tags', href: '/section-tags', icon: Tag },
     { label: 'Homepage Layout', href: '/homepage-layout', icon: Layers },
     { label: 'Categories', href: '/categories', icon: Tag },
