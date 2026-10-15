@@ -11,9 +11,11 @@ import {
 
 const DEFAULT_HEADER_CONFIG = {
   logo_url: '',
-  logo_text: 'ToyWorld',
-  logo_tagline: 'DISCOVER • PLAY • LEARN',
-  show_tagline: true,
+  logo_text: '',
+  logo_tagline: '',
+  logo_width: 200,
+  logo_width_mobile: 150,
+  show_tagline: false,
   announcement_bar: {
     enabled: true,
     shipping_text: 'Free Shipping on Orders Above ₹999',
@@ -317,23 +319,92 @@ export default function HeaderSettingsPage() {
                   className="w-full text-xs p-3 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-sky-500 font-mono"
                 />
               </div>
+
+              {/* Logo Dimensions / Width Settings */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Desktop Logo Width (px)
+                    </label>
+                    <span className="text-xs font-mono font-bold text-sky-600 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
+                      {config.logo_width || 200}px
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="range"
+                      min="160"
+                      max="450"
+                      step="5"
+                      value={config.logo_width || 200}
+                      onChange={(e) => setConfig(prev => ({ ...prev, logo_width: Number(e.target.value) }))}
+                      className="flex-1 accent-sky-600 cursor-pointer"
+                    />
+                    <input
+                      type="number"
+                      min="160"
+                      max="500"
+                      value={config.logo_width || 200}
+                      onChange={(e) => setConfig(prev => ({ ...prev, logo_width: Math.max(160, Number(e.target.value) || 200) }))}
+                      className="w-20 text-xs p-2 border border-slate-300 rounded-lg text-center font-bold"
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Min-width 200px on desktop with auto height.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Mobile Logo Width (px)
+                    </label>
+                    <span className="text-xs font-mono font-bold text-sky-600 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
+                      {config.logo_width_mobile || 150}px
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="range"
+                      min="100"
+                      max="260"
+                      step="5"
+                      value={config.logo_width_mobile || 150}
+                      onChange={(e) => setConfig(prev => ({ ...prev, logo_width_mobile: Number(e.target.value) }))}
+                      className="flex-1 accent-sky-600 cursor-pointer"
+                    />
+                    <input
+                      type="number"
+                      min="100"
+                      max="260"
+                      value={config.logo_width_mobile || 150}
+                      onChange={(e) => setConfig(prev => ({ ...prev, logo_width_mobile: Math.max(80, Number(e.target.value) || 150) }))}
+                      className="w-20 text-xs p-2 border border-slate-300 rounded-lg text-center font-bold"
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Scaled automatically for smartphone screens.
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Brand Title (Fallback) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
               <div className="space-y-1">
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Brand Name (Fallback)
+                  Brand Name (Text Fallback)
                 </label>
                 <input
                   type="text"
                   value={config.logo_text || ''}
                   onChange={(e) => setConfig(prev => ({ ...prev, logo_text: e.target.value }))}
-                  placeholder="e.g. ToyWorld"
+                  placeholder="e.g. MyStore"
                   className="w-full text-xs p-3 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-sky-500 font-semibold"
                 />
                 <p className="text-[11px] text-slate-400">
-                  Displayed when no logo image is set or while loading.
+                  Optional. Displayed only if no logo image is set.
                 </p>
               </div>
 
@@ -490,22 +561,30 @@ export default function HeaderSettingsPage() {
                   <img
                     src={config.logo_url}
                     alt={config.logo_text || 'Logo'}
-                    className="max-h-9 w-auto object-contain"
+                    className="h-auto object-contain block max-w-full"
+                    style={{
+                      width: `${Math.min(config.logo_width || 200, 240)}px`,
+                      minWidth: '120px'
+                    }}
                   />
+                ) : config.logo_text ? (
+                  <div className="flex flex-col">
+                    <div className="text-base font-black tracking-tight text-slate-800 leading-none">
+                      {config.logo_text}
+                    </div>
+                    {config.show_tagline && config.logo_tagline && (
+                      <div className="text-[8px] font-bold text-slate-400 tracking-widest mt-0.5 uppercase">
+                        {config.logo_tagline}
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-orange-400 rounded-full flex items-center justify-center text-lg shadow-inner">
-                      🐻
-                    </div>
-                    <div>
-                      <div className="text-base font-black tracking-tight leading-none">
-                        <span className="text-[#F51F2D]">Toy</span><span className="text-[#1877F2]">World</span>
-                      </div>
-                      {config.show_tagline !== false && (
-                        <div className="text-[8px] font-bold text-gray-500 tracking-widest mt-0.5">
-                          {config.logo_tagline || 'DISCOVER • PLAY • LEARN'}
-                        </div>
-                      )}
+                    <div
+                      className="h-9 bg-slate-200 animate-pulse rounded-lg flex items-center justify-center text-[10px] text-slate-400 font-semibold px-4"
+                      style={{ width: `${Math.min(config.logo_width || 200, 180)}px` }}
+                    >
+                      Logo Skeleton
                     </div>
                   </div>
                 )}
