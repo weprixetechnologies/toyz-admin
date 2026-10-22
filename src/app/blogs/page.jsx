@@ -34,7 +34,7 @@ export default function BlogsAdminPage() {
     featured_image: '',
     category_name: 'RC Cars',
     category_slug: 'rc-cars',
-    author_name: 'ToyWorld Team',
+    author_name: 'Provoke Playtech Team',
     reading_time: '5 min read',
     is_published: 1,
     meta_title: '',
@@ -84,7 +84,7 @@ export default function BlogsAdminPage() {
       title,
       // Auto-generate slug if not editing an existing custom slug or if slug was empty
       slug: editingBlog ? prev.slug : generateSlug(title),
-      meta_title: prev.meta_title ? prev.meta_title : `${title} — ToyWorld`
+      meta_title: prev.meta_title ? prev.meta_title : `${title} — Provoke Playtech`
     }));
   };
 
@@ -110,7 +110,7 @@ export default function BlogsAdminPage() {
       featured_image: '',
       category_name: categories[0]?.name || 'RC Cars',
       category_slug: categories[0]?.slug || 'rc-cars',
-      author_name: 'ToyWorld Team',
+      author_name: 'Provoke Playtech Team',
       reading_time: '5 min read',
       is_published: 1,
       meta_title: '',
@@ -130,7 +130,7 @@ export default function BlogsAdminPage() {
       featured_image: blog.featured_image || '',
       category_name: blog.category_name || 'General',
       category_slug: blog.category_slug || 'general',
-      author_name: blog.author_name || 'ToyWorld Team',
+      author_name: blog.author_name || 'Provoke Playtech Team',
       reading_time: blog.reading_time || '5 min read',
       is_published: blog.is_published ? 1 : 0,
       meta_title: blog.meta_title || '',
@@ -313,7 +313,7 @@ export default function BlogsAdminPage() {
               </span>
             </div>
             <p className="text-slate-500 text-sm">
-              Create, edit, and publish engaging articles, parenting tips, and guides for ToyWorld
+              Create, edit, and publish engaging articles, parenting tips, and guides for Provoke Playtech
             </p>
           </div>
         </div>
@@ -497,7 +497,7 @@ export default function BlogsAdminPage() {
 
                     {/* Author & Time */}
                     <td className="py-3.5 px-4 whitespace-nowrap">
-                      <div className="font-semibold text-slate-700">{blog.author_name || 'ToyWorld'}</div>
+                      <div className="font-semibold text-slate-700">{blog.author_name || 'Provoke Playtech'}</div>
                       <div className="text-[10px] text-slate-400">{blog.reading_time || '5 min read'}</div>
                     </td>
 
@@ -513,11 +513,10 @@ export default function BlogsAdminPage() {
                       <button
                         type="button"
                         onClick={() => handleTogglePublish(blog)}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition ${
-                          blog.is_published
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition ${blog.is_published
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
                             : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
-                        }`}
+                          }`}
                         title="Click to toggle publish status"
                       >
                         {blog.is_published ? (
@@ -594,7 +593,7 @@ export default function BlogsAdminPage() {
                     {editingBlog ? 'Edit Blog Article' : 'Create New Blog Article'}
                   </h3>
                   <p className="text-xs text-slate-500">
-                    {editingBlog ? `Editing ID: #${editingBlog.id}` : 'Draft a new story for the ToyWorld storefront'}
+                    {editingBlog ? `Editing ID: #${editingBlog.id}` : 'Draft a new story for the Provoke Playtech storefront'}
                   </p>
                 </div>
               </div>
@@ -702,7 +701,7 @@ export default function BlogsAdminPage() {
                         type="text"
                         value={formData.author_name}
                         onChange={(e) => setFormData(prev => ({ ...prev, author_name: e.target.value }))}
-                        placeholder="e.g. ToyWorld Team"
+                        placeholder="e.g. Provoke Playtech Team"
                         className="w-full text-xs p-3 border border-slate-300 rounded-xl bg-white"
                       />
                     </div>
@@ -826,7 +825,7 @@ export default function BlogsAdminPage() {
                           type="text"
                           value={formData.meta_title}
                           onChange={(e) => setFormData(prev => ({ ...prev, meta_title: e.target.value }))}
-                          placeholder="e.g. Top RC Cars for Kids in 2026 — ToyWorld"
+                          placeholder="e.g. Top RC Cars for Kids in 2026 — Provoke Playtech"
                           className="w-full text-xs p-2.5 border border-slate-300 rounded-xl bg-white"
                         />
                       </div>

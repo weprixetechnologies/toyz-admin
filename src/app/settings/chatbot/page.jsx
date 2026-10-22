@@ -48,9 +48,9 @@ export default function ChatbotSettingsPage() {
 
   const [chatbotConfig, setChatbotConfig] = useState({
     enabled: true,
-    bot_name: 'ToyWorld Assistant',
+    bot_name: 'Provoke Playtech Assistant',
     bot_subtitle: 'Online • Quick Answers',
-    welcome_message: 'Hi there! 👋 Welcome to ToyWorld. How can we help you today? Please choose an option below:',
+    welcome_message: 'Hi there! 👋 Welcome to Provoke Playtech. How can we help you today? Please choose an option below:',
     button_tooltip: 'Chat with Us',
     button_color: '#4f46e5',
     flow: []
@@ -683,7 +683,7 @@ export default function ChatbotSettingsPage() {
                   </div>
                   <div>
                     <h4 className="font-bold text-xs leading-none">
-                      {chatbotConfig.bot_name || 'ToyWorld Assistant'}
+                      {chatbotConfig.bot_name || 'Provoke Playtech Assistant'}
                     </h4>
                     <span className="text-[10px] text-white/80 mt-0.5 block">
                       {chatbotConfig.bot_subtitle || 'Online'}
@@ -697,16 +697,14 @@ export default function ChatbotSettingsPage() {
                 {simMessages.map((msg, i) => (
                   <div
                     key={i}
-                    className={`flex flex-col ${
-                      msg.sender === 'user' ? 'items-end' : 'items-start'
-                    }`}
+                    className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'
+                      }`}
                   >
                     <div
-                      className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 leading-relaxed text-xs ${
-                        msg.sender === 'user'
+                      className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 leading-relaxed text-xs ${msg.sender === 'user'
                           ? 'bg-indigo-600 text-white rounded-br-none shadow-sm'
                           : 'bg-white text-slate-800 rounded-bl-none shadow-sm border border-slate-100'
-                      }`}
+                        }`}
                     >
                       {msg.text}
 

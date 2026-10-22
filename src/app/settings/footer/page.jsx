@@ -14,7 +14,7 @@ import {
 const DEFAULT_FOOTER_CONFIG = {
   brand: {
     logo_url: '',
-    logo_text: 'ToyWorld',
+    logo_text: 'Provoke Playtech',
     about_text: 'Bringing joy to kids of all ages with premium toys, next-level RC cars, and educational games. Playtime never stops!',
     show_brand_column: true
   },
@@ -51,7 +51,7 @@ const DEFAULT_FOOTER_CONFIG = {
       id: 'col-contact',
       heading: 'Contact Us',
       type: 'custom',
-      custom_content: 'Email: hello@toyworld.com\nPhone: +1 (800) TOY-WORLD\nAddress: 123 Playtime Avenue, Fun City, TX 75001',
+      custom_content: 'Email: hello@Provoke Playtech.com\nPhone: +1 (800) TOY-WORLD\nAddress: 123 Playtime Avenue, Fun City, TX 75001',
       links: []
     }
   ],
@@ -69,7 +69,7 @@ const DEFAULT_FOOTER_CONFIG = {
   },
   bottom_bar: {
     enabled: true,
-    copyright_text: '© {year} ToyWorld Inc. All rights reserved.',
+    copyright_text: '© {year} Provoke Playtech Inc. All rights reserved.',
     links: [
       { id: 'bot-1', label: 'Privacy Policy', url: '/privacy', target: '_self' },
       { id: 'bot-2', label: 'Terms of Service', url: '/terms', target: '_self' }
@@ -476,11 +476,10 @@ export default function FooterSettingsPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-                isActive
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${isActive
                   ? 'bg-slate-900 text-white shadow-sm'
                   : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-              }`}
+                }`}
             >
               <Icon size={16} />
               <span>{tab.label}</span>
@@ -618,7 +617,7 @@ export default function FooterSettingsPage() {
                       brand: { ...prev.brand, logo_text: e.target.value }
                     }))
                   }
-                  placeholder="e.g. ToyWorld"
+                  placeholder="e.g. Provoke Playtech"
                   className="w-full text-xs p-3 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-sky-500"
                 />
               </div>
@@ -919,9 +918,8 @@ export default function FooterSettingsPage() {
                 return (
                   <div
                     key={platform.key}
-                    className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border transition ${
-                      linkObj.enabled ? 'bg-sky-50/40 border-sky-200' : 'bg-slate-50 border-slate-200 opacity-75'
-                    }`}
+                    className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border transition ${linkObj.enabled ? 'bg-sky-50/40 border-sky-200' : 'bg-slate-50 border-slate-200 opacity-75'
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-700">
@@ -997,7 +995,7 @@ export default function FooterSettingsPage() {
                     bottom_bar: { ...prev.bottom_bar, copyright_text: e.target.value }
                   }))
                 }
-                placeholder="© {year} ToyWorld Inc. All rights reserved."
+                placeholder="© {year} Provoke Playtech Inc. All rights reserved."
                 className="w-full text-xs p-3 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-sky-500"
               />
               <p className="text-[11px] text-slate-400">
@@ -1083,9 +1081,8 @@ export default function FooterSettingsPage() {
             <footer className="bg-[#17202A] text-white pt-16 pb-8 border-t-[8px] border-[#F51F2D] font-sans">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div
-                  className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${
-                    config.column_count || 4
-                  } gap-12 mb-12`}
+                  className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${config.column_count || 4
+                    } gap-12 mb-12`}
                 >
                   {/* Brand Column */}
                   {config.brand?.show_brand_column !== false && (
@@ -1100,7 +1097,7 @@ export default function FooterSettingsPage() {
                         ) : (
                           <>
                             <Gift size={32} className="text-[#F51F2D]" />
-                            <span>{config.brand?.logo_text || 'ToyWorld'}</span>
+                            <span>{config.brand?.logo_text || 'Provoke Playtech'}</span>
                           </>
                         )}
                       </div>
@@ -1154,9 +1151,8 @@ export default function FooterSettingsPage() {
                               <a
                                 href={link.url}
                                 target={link.target || '_self'}
-                                className={`transition-colors hover:text-[#F51F2D] ${
-                                  link.highlight ? 'text-amber-400 font-semibold' : ''
-                                }`}
+                                className={`transition-colors hover:text-[#F51F2D] ${link.highlight ? 'text-amber-400 font-semibold' : ''
+                                  }`}
                               >
                                 {link.label}
                               </a>
@@ -1172,7 +1168,7 @@ export default function FooterSettingsPage() {
                 {config.bottom_bar?.enabled !== false && (
                   <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4">
                     <p className="text-sm font-medium text-[#5F6872]">
-                      {(config.bottom_bar?.copyright_text || '© {year} ToyWorld Inc. All rights reserved.').replace(
+                      {(config.bottom_bar?.copyright_text || '© {year} Provoke Playtech Inc. All rights reserved.').replace(
                         '{year}',
                         new Date().getFullYear().toString()
                       )}
