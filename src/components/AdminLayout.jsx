@@ -7,7 +7,8 @@ import { useAdminAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, ShoppingBag, Package, Layers, Tag, CreditCard,
   Percent, Users, Briefcase, Award, Truck, BarChart3, ShieldCheck,
-  Activity, MessageSquare, Database, LogOut, Star, Search, PanelBottom, PanelTop, BookOpen
+  Activity, MessageSquare, Database, LogOut, Star, Search, PanelBottom, PanelTop, BookOpen,
+  Inbox, Bot
 } from 'lucide-react';
 
 export default function AdminLayout({ children }) {
@@ -38,6 +39,7 @@ export default function AdminLayout({ children }) {
     { label: 'Orders Feed', href: '/orders', icon: Package },
     { label: 'Reseller Queue', href: '/orders/reseller-pending', icon: Briefcase },
     { label: 'Users & Customers', href: '/users', icon: Users, exact: true },
+    { label: 'Inquiries & Leads', href: '/leads', icon: Inbox },
     { label: 'Products Catalog', href: '/products', icon: ShoppingBag },
     { label: 'CSV Import', href: '/products/import', icon: Layers },
     { label: 'Banners', href: '/banners', icon: Layers },
@@ -63,6 +65,7 @@ export default function AdminLayout({ children }) {
     { label: 'Search Settings', href: '/settings/search', icon: Search },
     { label: 'Header & Logo', href: '/settings/header', icon: PanelTop },
     { label: 'Footer Settings', href: '/settings/footer', icon: PanelBottom },
+    { label: 'Chatbot & Widgets', href: '/settings/chatbot', icon: Bot },
   ];
 
   return (
