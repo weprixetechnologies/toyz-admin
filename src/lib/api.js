@@ -80,8 +80,8 @@ export async function fetchAdminApi(endpoint, options = {}, isRetry = false) {
     }
 
     if (!response.ok) {
-      // Handle Token Expiry
-      if (response.status === 401 && !isRetry) {
+      // Handle Token Expiry (skip refreshing for auth endpoints)
+      if (response.status === 401 && !isRetry && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/refresh')) {
         const refreshToken = getAdminRefreshToken();
         if (refreshToken) {
           try {
@@ -97,9 +97,16 @@ export async function fetchAdminApi(endpoint, options = {}, isRetry = false) {
                 setAdminRefreshToken(refreshData.data.tokens.refreshToken || refreshData.data.tokens.refresh_token);
                 return fetchAdminApi(endpoint, options, true);
               }
+            } else {
+              setAdminToken('');
+              setAdminRefreshToken('');
+              setAdminProfile(null);
             }
           } catch (e) {
             console.error('Refresh token failed', e);
+            setAdminToken('');
+            setAdminRefreshToken('');
+            setAdminProfile(null);
           }
         }
       }

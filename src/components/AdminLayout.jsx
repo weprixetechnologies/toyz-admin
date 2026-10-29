@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAdminAuth } from '../context/AuthContext';
+import { useAdminAuth, isAuthorizedAdminRole } from '../context/AuthContext';
 import {
   LayoutDashboard, ShoppingBag, Package, Layers, Tag, CreditCard,
   Percent, Users, Briefcase, Award, Truck, BarChart3, ShieldCheck,
@@ -17,8 +17,10 @@ export default function AdminLayout({ children }) {
   const { admin, loading, logout } = useAdminAuth();
 
   useEffect(() => {
-    if (!loading && !admin && pathname !== '/login') {
-      router.push('/login');
+    if (!loading && pathname !== '/login') {
+      if (!admin || !isAuthorizedAdminRole(admin.role)) {
+        router.push('/login');
+      }
     }
   }, [loading, admin, pathname, router]);
 
@@ -32,7 +34,7 @@ export default function AdminLayout({ children }) {
     );
   }
 
-  if (!admin) return null;
+  if (!admin || !isAuthorizedAdminRole(admin.role)) return null;
 
   const navItems = [
     { label: 'Dashboard', href: '/', icon: LayoutDashboard },
