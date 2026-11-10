@@ -8,7 +8,7 @@ import {
   LayoutDashboard, ShoppingBag, Package, Layers, Tag, CreditCard,
   Percent, Users, Briefcase, Award, Truck, BarChart3, ShieldCheck,
   Activity, MessageSquare, Database, LogOut, Star, Search, PanelBottom, PanelTop, BookOpen,
-  Inbox, Bot
+  Inbox, Bot, Building2
 } from 'lucide-react';
 
 export default function AdminLayout({ children }) {
@@ -67,6 +67,7 @@ export default function AdminLayout({ children }) {
     { label: 'Search Settings', href: '/settings/search', icon: Search },
     { label: 'Header & Logo', href: '/settings/header', icon: PanelTop },
     { label: 'Footer Settings', href: '/settings/footer', icon: PanelBottom },
+    { label: 'Store & Invoice', href: '/settings/store', icon: Building2 },
     { label: 'Chatbot & Widgets', href: '/settings/chatbot', icon: Bot },
   ];
 

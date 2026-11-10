@@ -145,5 +145,35 @@ export const adminApi = {
   delete: (url, options = {}) => fetchAdminApi(url, { method: 'DELETE', ...(options.data ? { body: options.data } : {}) })
 };
 
+export async function downloadAdminFile(endpoint, defaultFilename = 'document.pdf') {
+  const token = getAdminToken();
+  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  });
+
+  if (!response.ok) {
+    let errMsg = 'Failed to download file';
+    try {
+      const errJson = await response.json();
+      errMsg = errJson.message || errMsg;
+    } catch (_) {}
+    throw new Error(errMsg);
+  }
+
+  const blob = await response.blob();
+  const blobUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = defaultFilename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(blobUrl);
+}
+
 export const api = adminApi;
 export default adminApi;

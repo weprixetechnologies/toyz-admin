@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { adminApi } from '../../../lib/api';
+import { adminApi, downloadAdminFile } from '../../../lib/api';
 import StatusBadge from '../../../components/StatusBadge';
 import { Package, Download, Truck, Edit2, Check, AlertCircle, Plus, Save, MapPin, User, Phone, CreditCard } from 'lucide-react';
 
@@ -27,6 +27,9 @@ export default function AdminOrderDetailPage() {
   const [carrier, setCarrier] = useState('Express Logistics');
   const [trackingNum, setTrackingNum] = useState('');
   const [selectedShipQty, setSelectedShipQty] = useState({});
+
+  const [downloadingInvoice, setDownloadingInvoice] = useState(false);
+  const [downloadingSlip, setDownloadingSlip] = useState(false);
 
   async function loadDetail() {
     setLoading(true);
@@ -126,6 +129,28 @@ export default function AdminOrderDetailPage() {
       loadDetail();
     } else {
       alert(res.message || 'Failed to create shipment');
+    }
+  };
+
+  const handleDownloadInvoice = async () => {
+    try {
+      setDownloadingInvoice(true);
+      await downloadAdminFile(`/admin/orders/${order.id}/invoice`, `Invoice-${order.order_number || order.id}.pdf`);
+    } catch (err) {
+      alert(err.message || 'Failed to download invoice');
+    } finally {
+      setDownloadingInvoice(false);
+    }
+  };
+
+  const handleDownloadPackingSlip = async () => {
+    try {
+      setDownloadingSlip(true);
+      await downloadAdminFile(`/admin/orders/${order.id}/packing-slip`, `PackingSlip-${order.order_number || order.id}.pdf`);
+    } catch (err) {
+      alert(err.message || 'Failed to download packing slip');
+    } finally {
+      setDownloadingSlip(false);
     }
   };
 
@@ -432,22 +457,22 @@ export default function AdminOrderDetailPage() {
           </div>
           <h3 className="font-bold text-slate-900 text-base border-b border-slate-100 pb-3">Order Documents</h3>
           <div className="space-y-2">
-            <a
-              href={`https://backend.provokeplaytech.com/api/v1/orders/${order.id}/invoice`}
-              target="_blank"
-              rel="noreferrer"
-              className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition"
+            <button
+              type="button"
+              onClick={handleDownloadInvoice}
+              disabled={downloadingInvoice}
+              className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition disabled:opacity-50"
             >
-              <Download size={14} /> Download Tax Invoice (HTML/PDF)
-            </a>
-            <a
-              href={`https://backend.provokeplaytech.com/api/v1/admin/orders/${order.id}/packing-slip`}
-              target="_blank"
-              rel="noreferrer"
-              className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition"
+              <Download size={14} /> {downloadingInvoice ? 'Generating Tax Invoice PDF...' : 'Download Tax Invoice (PDF)'}
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadPackingSlip}
+              disabled={downloadingSlip}
+              className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition disabled:opacity-50"
             >
-              <Download size={14} /> Download Warehouse Packing Slip
-            </a>
+              <Download size={14} /> {downloadingSlip ? 'Generating Packing Slip PDF...' : 'Download Warehouse Packing Slip (PDF)'}
+            </button>
           </div>
         </div>
       </div>
