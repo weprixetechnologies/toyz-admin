@@ -130,6 +130,7 @@ export default function AdminOrdersPage() {
                   <th className="p-4">Customer Name</th>
                   <th className="p-4">Role</th>
                   <th className="p-4">Status</th>
+                  <th className="p-4">Payment</th>
                   <th className="p-4">Grand Total</th>
                   <th className="p-4">Date</th>
                   <th className="p-4">Action</th>
@@ -149,6 +150,7 @@ export default function AdminOrdersPage() {
                     <td className="p-4 text-slate-700">{o.shipping_name || o.user_name || 'Customer'}</td>
                     <td className="p-4 text-slate-500 uppercase font-semibold">{o.placed_by_role || 'customer'}</td>
                     <td className="p-4"><StatusBadge status={o.status} /></td>
+                    <td className="p-4"><StatusBadge status={o.payment_status || 'pending'} /></td>
                     <td className="p-4 font-bold text-slate-900">₹{parseFloat(o.grand_total || 0).toLocaleString('en-IN')}</td>
                     <td className="p-4 text-slate-400">{new Date(o.created_at || Date.now()).toLocaleDateString('en-IN')}</td>
                     <td className="p-4">

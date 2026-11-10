@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { adminApi } from '../../../lib/api';
 import StatusBadge from '../../../components/StatusBadge';
-import { Package, Download, Truck, Edit2, Check, AlertCircle, Plus, Save, MapPin, User, Phone } from 'lucide-react';
+import { Package, Download, Truck, Edit2, Check, AlertCircle, Plus, Save, MapPin, User, Phone, CreditCard } from 'lucide-react';
 
 export default function AdminOrderDetailPage() {
   const { id } = useParams();
@@ -13,6 +13,9 @@ export default function AdminOrderDetailPage() {
 
   const [status, setStatus] = useState('');
   const [statusUpdating, setStatusUpdating] = useState(false);
+
+  const [paymentStatus, setPaymentStatus] = useState('');
+  const [paymentStatusUpdating, setPaymentStatusUpdating] = useState(false);
 
   const [editItemId, setEditItemId] = useState(null);
   const [editShipping, setEditShipping] = useState(false);
@@ -31,6 +34,7 @@ export default function AdminOrderDetailPage() {
     if (res.success && res.data) {
       setOrderData(res.data);
       setStatus(res.data.order?.status || 'pending');
+      setPaymentStatus(res.data.order?.payment_status || 'pending');
     }
     setLoading(false);
   }
@@ -67,6 +71,18 @@ export default function AdminOrderDetailPage() {
       alert(res.message || 'Status update failed');
     }
     setStatusUpdating(false);
+  };
+
+  const handleUpdatePaymentStatus = async () => {
+    setPaymentStatusUpdating(true);
+    const res = await adminApi.put(`/admin/orders/${id}/payment-status`, { payment_status: paymentStatus });
+    if (res.success) {
+      alert(`Payment status updated to '${paymentStatus}'`);
+      loadDetail();
+    } else {
+      alert(res.message || 'Payment status update failed');
+    }
+    setPaymentStatusUpdating(false);
   };
 
   const handleSaveItem = async (itemId) => {
@@ -118,51 +134,81 @@ export default function AdminOrderDetailPage() {
       {/* Top Action Bar */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-black text-slate-900">{order.order_number}</h1>
-            <StatusBadge status={order.status} />
+            <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Order:</span>
+              <StatusBadge status={order.status} />
+            </div>
+            <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Payment:</span>
+              <StatusBadge status={order.payment_status || 'pending'} />
+            </div>
           </div>
           <p className="text-xs text-gray-500 mt-1">
             Placed: {new Date(order.created_at || Date.now()).toLocaleString('en-IN')} | Role: <span className="font-bold uppercase">{order.placed_by_role}</span>
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-xs bg-white font-bold"
-          >
-            <option value="pending">pending</option>
-            <option value="pending_approval">pending_approval</option>
-            <option value="processing">processing</option>
-            <option value="partially_shipped">partially_shipped</option>
-            <option value="shipped">shipped</option>
-            <option value="delivered">delivered</option>
-            <option value="cancelled">cancelled</option>
-          </select>
-          <button
-            onClick={handleUpdateStatus}
-            disabled={statusUpdating}
-            className="bg-slate-900 text-white font-bold text-xs px-4 py-2 rounded-lg hover:bg-sky-600 transition"
-          >
-            Update Status
-          </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-xs bg-white font-bold"
+            >
+              <option value="pending">Order: pending</option>
+              <option value="pending_approval">Order: pending_approval</option>
+              <option value="processing">Order: processing</option>
+              <option value="partially_shipped">Order: partially_shipped</option>
+              <option value="shipped">Order: shipped</option>
+              <option value="delivered">Order: delivered</option>
+              <option value="cancelled">Order: cancelled</option>
+            </select>
+            <button
+              onClick={handleUpdateStatus}
+              disabled={statusUpdating}
+              className="bg-slate-900 text-white font-bold text-xs px-3.5 py-2 rounded-lg hover:bg-sky-600 transition"
+            >
+              Update Order
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <select
+              value={paymentStatus}
+              onChange={(e) => setPaymentStatus(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 text-xs bg-white font-bold"
+            >
+              <option value="pending">Payment: pending</option>
+              <option value="paid">Payment: paid</option>
+              <option value="partially_paid">Payment: partially_paid</option>
+              <option value="failed">Payment: failed</option>
+              <option value="refunded">Payment: refunded</option>
+            </select>
+            <button
+              onClick={handleUpdatePaymentStatus}
+              disabled={paymentStatusUpdating}
+              className="bg-emerald-600 text-white font-bold text-xs px-3.5 py-2 rounded-lg hover:bg-emerald-700 transition"
+            >
+              Update Payment
+            </button>
+          </div>
         </div>
       </div>
 
 
-      {/* Customer & Address Details */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      {/* Customer, Address & Payment Details */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-3">
           <h3 className="font-bold text-slate-900 text-base flex items-center gap-2 border-b border-slate-100 pb-2">
             <User className="text-sky-600" size={16} /> Customer Details
           </h3>
-          <div className="text-sm text-slate-600 space-y-1">
+          <div className="text-sm text-slate-600 space-y-1.5">
             <p><span className="font-semibold text-slate-800">Name:</span> {order?.shipping_name || order?.billing_name || 'N/A'}</p>
             <p className="flex items-center gap-1"><Phone size={14} className="text-slate-400" /> <span className="font-semibold text-slate-800">Phone:</span> {order?.shipping_phone || 'N/A'}</p>
             {order?.billing_gstin && <p><span className="font-semibold text-slate-800">GSTIN:</span> <span className="uppercase font-mono">{order?.billing_gstin}</span></p>}
-            <p><span className="font-semibold text-slate-800">Role:</span> <span className="uppercase text-xs font-bold bg-slate-100 px-2 py-1 rounded text-slate-600">{order?.placed_by_role || 'Customer'}</span></p>
+            <p><span className="font-semibold text-slate-800">Role:</span> <span className="uppercase text-xs font-bold bg-slate-100 px-2 py-0.5 rounded text-slate-600">{order?.placed_by_role || 'Customer'}</span></p>
           </div>
         </div>
 
@@ -171,10 +217,47 @@ export default function AdminOrderDetailPage() {
             <MapPin className="text-sky-600" size={16} /> Shipping Address
           </h3>
           <div className="text-sm text-slate-600 space-y-1">
+            <p className="font-medium text-slate-800">{order?.shipping_name || 'Recipient'}</p>
             <p>{order?.shipping_line1}</p>
             {order?.shipping_line2 && <p>{order?.shipping_line2}</p>}
             <p>{order?.shipping_city}, {order?.shipping_state} {order?.shipping_pin}</p>
-            <p>{order?.shipping_country}</p>
+            <p>{order?.shipping_country || 'India'}</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-3">
+          <h3 className="font-bold text-slate-900 text-base flex items-center gap-2 border-b border-slate-100 pb-2">
+            <CreditCard className="text-sky-600" size={16} /> Payment & Billing
+          </h3>
+          <div className="text-sm text-slate-600 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-800">Payment Status:</span>
+              <StatusBadge status={order?.payment_status || 'pending'} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-800">Method:</span>
+              <span className="font-bold text-slate-900 uppercase text-xs bg-slate-100 px-2 py-0.5 rounded">
+                {order?.payment_method || (order?.is_cod ? 'COD' : 'Online')}
+              </span>
+            </div>
+            {order?.payment_gateway && (
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-slate-800">Gateway:</span>
+                <span className="font-medium text-slate-700 capitalize text-xs">{order.payment_gateway}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-800">Ref / Txn ID:</span>
+              <span className="font-mono text-xs text-slate-700 truncate max-w-[140px]" title={order?.payment_ref || 'N/A'}>
+                {order?.payment_ref || 'N/A'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-800">Paid At:</span>
+              <span className="text-xs text-slate-700">
+                {order?.paid_at ? new Date(order.paid_at).toLocaleString('en-IN') : 'Not paid'}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -309,6 +392,14 @@ export default function AdminOrderDetailPage() {
         <div className="bg-white p-6 rounded-2xl border border-slate-200 h-fit space-y-6">
           <h3 className="font-bold text-slate-900 text-base border-b border-slate-100 pb-3 mb-4">Financial Summary</h3>
           <div className="space-y-3 text-xs mb-6 pb-6 border-b border-slate-100">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500">Payment Status</span>
+              <StatusBadge status={order?.payment_status || 'pending'} />
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Payment Method</span>
+              <span className="font-bold text-slate-900 uppercase">{order?.payment_method || (order?.is_cod ? 'COD' : 'Online')}</span>
+            </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Items Subtotal</span>
               <span className="font-bold text-slate-900">₹{parseFloat(order?.subtotal || 0).toLocaleString('en-IN')}</span>
