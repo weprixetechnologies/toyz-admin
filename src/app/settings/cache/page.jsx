@@ -38,7 +38,16 @@ export default function CacheSettingsPage() {
     setLoadingKeys(true);
     try {
       const res = await api.get('/cache/keys');
-      if (res.success) setKeys(res.data || []);
+      if (res.success && res.data) {
+        const list = Array.isArray(res.data.keys)
+          ? res.data.keys
+          : Array.isArray(res.data)
+          ? res.data
+          : [];
+        setKeys(list);
+      } else {
+        setKeys([]);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -181,7 +190,7 @@ export default function CacheSettingsPage() {
           </div>
           {loadingKeys ? (
             <div className="p-6 text-center text-slate-500">Loading cache keys...</div>
-          ) : keys.length === 0 ? (
+          ) : !Array.isArray(keys) || keys.length === 0 ? (
             <div className="p-6 text-center text-slate-500">No cache keys found.</div>
           ) : (
             <div className="max-h-[600px] overflow-y-auto">
@@ -193,7 +202,7 @@ export default function CacheSettingsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {keys.map((key) => (
+                  {(Array.isArray(keys) ? keys : []).map((key) => (
                     <React.Fragment key={key}>
                       <tr className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => toggleExpandKey(key)}>
                         <td className="p-4 text-sm font-mono text-slate-700 break-all select-none">

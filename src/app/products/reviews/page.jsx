@@ -11,7 +11,16 @@ export default function ReviewModerationPage() {
     setLoading(true);
     try {
       const res = await api.get(`/reviews?status=${tab}`);
-      if (res.success) setReviews(res.data?.reviews || []);
+      if (res.success && res.data) {
+        const list = Array.isArray(res.data.reviews)
+          ? res.data.reviews
+          : Array.isArray(res.data)
+          ? res.data
+          : [];
+        setReviews(list);
+      } else {
+        setReviews([]);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -65,11 +74,11 @@ export default function ReviewModerationPage() {
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-slate-500">Loading reviews...</div>
-        ) : reviews.length === 0 ? (
+        ) : !Array.isArray(reviews) || reviews.length === 0 ? (
           <div className="p-8 text-center text-slate-500">No {tab} reviews found.</div>
         ) : (
           <div className="divide-y divide-slate-100">
-            {reviews.map((r) => (
+            {(Array.isArray(reviews) ? reviews : []).map((r) => (
               <div key={r.id} className="p-6 flex flex-col md:flex-row justify-between gap-4 hover:bg-slate-50">
                 <div>
                   <div className="flex items-center gap-3 mb-2">

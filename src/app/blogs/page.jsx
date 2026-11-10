@@ -54,10 +54,24 @@ export default function BlogsAdminPage() {
       ]);
 
       if (blogsRes.success && blogsRes.data) {
-        setBlogs(blogsRes.data);
+        const list = Array.isArray(blogsRes.data.blogs)
+          ? blogsRes.data.blogs
+          : Array.isArray(blogsRes.data)
+          ? blogsRes.data
+          : [];
+        setBlogs(list);
+      } else {
+        setBlogs([]);
       }
       if (catsRes.success && catsRes.data) {
-        setCategories(catsRes.data);
+        const catList = Array.isArray(catsRes.data.categories)
+          ? catsRes.data.categories
+          : Array.isArray(catsRes.data)
+          ? catsRes.data
+          : [];
+        setCategories(catList);
+      } else {
+        setCategories([]);
       }
     } catch (err) {
       console.error(err);
@@ -273,7 +287,8 @@ export default function BlogsAdminPage() {
   };
 
   // Filtered Blogs
-  const filteredBlogs = blogs.filter((b) => {
+  const safeBlogs = Array.isArray(blogs) ? blogs : [];
+  const filteredBlogs = safeBlogs.filter((b) => {
     const matchesSearch =
       !searchQuery.trim() ||
       b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||

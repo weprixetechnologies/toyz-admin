@@ -14,8 +14,15 @@ export default function ResellerPendingQueuePage() {
     async function loadPending() {
       setLoading(true);
       const res = await adminApi.get('/admin/orders/reseller-pending');
-      if (res.success) {
-        setPendingOrders(res.data?.orders || res.data || []);
+      if (res.success && res.data) {
+        const list = Array.isArray(res.data.orders)
+          ? res.data.orders
+          : Array.isArray(res.data)
+          ? res.data
+          : [];
+        setPendingOrders(list);
+      } else {
+        setPendingOrders([]);
       }
       setLoading(false);
     }

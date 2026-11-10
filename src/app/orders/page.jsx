@@ -18,8 +18,15 @@ export default function AdminOrdersPage() {
     const params = {};
     if (statusFilter) params.status = statusFilter;
     const res = await adminApi.get('/admin/orders', params);
-    if (res.success) {
-      setOrders(res.data?.orders || res.data || []);
+    if (res.success && res.data) {
+      const list = Array.isArray(res.data.orders)
+        ? res.data.orders
+        : Array.isArray(res.data)
+        ? res.data
+        : [];
+      setOrders(list);
+    } else {
+      setOrders([]);
     }
     setLoading(false);
   }

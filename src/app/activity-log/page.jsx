@@ -11,8 +11,15 @@ export default function ActivityLogPage() {
     async function loadLogs() {
       try {
         const res = await api.get('/admin/activity-log');
-        if (res.success) {
-          setLogs(res.data?.logs || res.data || []);
+        if (res.success && res.data) {
+          const list = Array.isArray(res.data.logs)
+            ? res.data.logs
+            : Array.isArray(res.data)
+            ? res.data
+            : [];
+          setLogs(list);
+        } else {
+          setLogs([]);
         }
       } catch (err) {
         console.error(err);
@@ -49,7 +56,7 @@ export default function ActivityLogPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {logs.map((log) => (
+              {(Array.isArray(logs) ? logs : []).map((log) => (
                 <tr key={log.id} className="hover:bg-slate-50">
                   <td className="p-4 text-slate-500 text-xs">{new Date(log.created_at).toLocaleString()}</td>
                   <td className="p-4 font-bold text-slate-800">{log.user_name || `User #${log.user_id}`}</td>

@@ -111,7 +111,7 @@ export default function PaymentGatewaysPage() {
           </div>
 
           {/* Dynamic Registry Gateway Cards (Razorpay, Stripe, etc.) */}
-          {gateways.map((gw) => (
+          {(Array.isArray(gateways) ? gateways : []).map((gw) => (
             <div key={gw.key_name} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">

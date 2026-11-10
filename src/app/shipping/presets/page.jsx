@@ -11,7 +11,16 @@ export default function ShippingPresetsPage() {
   const fetchPresets = async () => {
     try {
       const res = await api.get('/admin/shipping/presets');
-      if (res.success) setPresets(res.data || []);
+      if (res.success && res.data) {
+        const list = Array.isArray(res.data.presets)
+          ? res.data.presets
+          : Array.isArray(res.data)
+          ? res.data
+          : [];
+        setPresets(list);
+      } else {
+        setPresets([]);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -129,7 +138,7 @@ export default function ShippingPresetsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
-                {presets.map((p) => (
+                {(Array.isArray(presets) ? presets : []).map((p) => (
                   <tr key={p.id} className="hover:bg-slate-50">
                     <td className="p-4 font-bold text-slate-800">{p.label}</td>
                     <td className="p-4 font-bold text-emerald-700">{Number(p.cost) === 0 ? 'FREE' : `₹${p.cost}`}</td>

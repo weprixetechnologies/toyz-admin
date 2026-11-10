@@ -26,11 +26,12 @@ export default function SectionTagsManager() {
     try {
       const res = await adminApi.get('/section-tags', { _t: Date.now() });
       if (res.success) {
-        setTags(res.data);
-        if (res.data.length > 0 && !selectedTag) {
-          setSelectedTag(res.data[0]);
+        const tagList = Array.isArray(res.data) ? res.data : (res.data?.tags || []);
+        setTags(tagList);
+        if (tagList.length > 0 && !selectedTag) {
+          setSelectedTag(tagList[0]);
         } else if (selectedTag) {
-          const updated = res.data.find(t => t.id === selectedTag.id);
+          const updated = tagList.find(t => t.id === selectedTag.id);
           if (updated) setSelectedTag(updated);
         }
       }
@@ -222,10 +223,10 @@ export default function SectionTagsManager() {
           <div className="flex-1 p-6 bg-gray-50 flex gap-4 overflow-x-auto items-start">
             {!selectedTag ? (
               <div className="w-full h-full flex items-center justify-center text-gray-400">Select a section tag from the left</div>
-            ) : selectedTag.products?.length === 0 ? (
+            ) : (!selectedTag.products || selectedTag.products.length === 0) ? (
               <div className="w-full h-full flex items-center justify-center text-gray-400">No products assigned yet. Use the bulk table below.</div>
             ) : (
-              selectedTag.products.map(p => (
+              (selectedTag.products || []).map(p => (
                 <div key={p.id} className="w-48 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex-shrink-0 flex flex-col">
                   <div className="h-48 bg-gray-100 relative">
                     {p.primary_image && <img src={p.primary_image} className="w-full h-full object-cover" />}

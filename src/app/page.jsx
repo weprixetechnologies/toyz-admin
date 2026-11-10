@@ -19,8 +19,22 @@ export default function AdminDashboardPage() {
         adminApi.get('/admin/orders/reseller-pending')
       ]);
 
-      if (ordRes.success) setOrders(ordRes.data?.orders || ordRes.data || []);
-      if (resRes.success) setPendingResellers(resRes.data?.orders || resRes.data || []);
+      if (ordRes.success && ordRes.data) {
+        const ordList = Array.isArray(ordRes.data.orders)
+          ? ordRes.data.orders
+          : Array.isArray(ordRes.data)
+          ? ordRes.data
+          : [];
+        setOrders(ordList);
+      }
+      if (resRes.success && resRes.data) {
+        const resList = Array.isArray(resRes.data.orders)
+          ? resRes.data.orders
+          : Array.isArray(resRes.data)
+          ? resRes.data
+          : [];
+        setPendingResellers(resList);
+      }
       setLoading(false);
     }
     loadDashboard();

@@ -23,7 +23,16 @@ export default function CategoriesPage() {
   async function loadCategories() {
     setLoading(true);
     const res = await adminApi.get('/categories');
-    if (res.success) setCategories(res.data?.raw || res.data || []);
+    if (res.success && res.data) {
+      const list = Array.isArray(res.data.raw)
+        ? res.data.raw
+        : Array.isArray(res.data)
+        ? res.data
+        : [];
+      setCategories(list);
+    } else {
+      setCategories([]);
+    }
     setLoading(false);
   }
 
@@ -166,7 +175,7 @@ export default function CategoriesPage() {
           <h3 className="font-bold text-slate-900 text-base">Category List</h3>
           {loading ? (
             <p className="text-sm text-gray-400">Loading categories...</p>
-          ) : categories.length > 0 ? (
+          ) : Array.isArray(categories) && categories.length > 0 ? (
             <div className="divide-y divide-slate-100 text-sm">
               {categories.map((c) => (
                 <div key={c.id} className="py-3 flex justify-between items-center">

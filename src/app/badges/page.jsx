@@ -63,9 +63,10 @@ export default function BadgesPage() {
   async function fetchBadges() {
     setLoading(true);
     const res = await adminApi.get('/badges');
-    if (res.success) {
-      setBadges(res.data?.badges || []);
+    if (res.success && res.data) {
+      setBadges(Array.isArray(res.data.badges) ? res.data.badges : (Array.isArray(res.data) ? res.data : []));
     } else {
+      setBadges([]);
       toast.error(res.message || 'Failed to fetch badges');
     }
     setLoading(false);
@@ -74,8 +75,10 @@ export default function BadgesPage() {
   async function fetchProducts() {
     setProductsLoading(true);
     const res = await adminApi.get('/products?limit=100');
-    if (res.success) {
-      setAllProducts(res.data?.products || []);
+    if (res.success && res.data) {
+      setAllProducts(Array.isArray(res.data.products) ? res.data.products : (Array.isArray(res.data) ? res.data : []));
+    } else {
+      setAllProducts([]);
     }
     setProductsLoading(false);
   }

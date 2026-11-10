@@ -11,19 +11,27 @@ export default function AffiliatesListPage() {
   useEffect(() => {
     async function loadAffiliates() {
       try {
-        const res = await api.get('/admin/affiliates');
-        if (res.success) {
+        let res = await api.get('/admin/affiliates');
+        if (!res.success && res.status === 404) {
+          res = await api.get('/affiliate/admin/list');
+        }
+        if (res.success && res.data) {
           const list = res.data?.affiliates || (Array.isArray(res.data) ? res.data : []);
           setAffiliates(list);
+        } else {
+          setAffiliates([]);
         }
       } catch (err) {
         console.error(err);
+        setAffiliates([]);
       } finally {
         setLoading(false);
       }
     }
     loadAffiliates();
   }, []);
+
+  const safeAffiliates = Array.isArray(affiliates) ? affiliates : [];
 
   return (
     <>
@@ -43,7 +51,7 @@ export default function AffiliatesListPage() {
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-slate-500">Loading affiliates...</div>
-        ) : affiliates.length === 0 ? (
+        ) : safeAffiliates.length === 0 ? (
           <div className="p-8 text-center text-slate-500">No registered affiliates yet.</div>
         ) : (
           <table className="w-full text-left border-collapse">
@@ -59,7 +67,7 @@ export default function AffiliatesListPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {affiliates.map((a) => (
+              {safeAffiliates.map((a) => (
                 <tr key={a.id} className="hover:bg-slate-50">
                   <td className="p-4 font-bold text-slate-800">{a.user_name || a.name || `User #${a.user_id}`}</td>
                   <td className="p-4 font-mono font-bold text-indigo-600">{a.referral_code}</td>

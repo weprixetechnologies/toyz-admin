@@ -13,10 +13,14 @@ export default function AffiliateDetailPage() {
 
   const fetchAffiliate = async () => {
     try {
-      const res = await api.get(`/admin/affiliates/${id}`);
-      if (res.success) {
-        setAffiliate(res.data);
-        setCommRate(res.data.commission_rate || '5');
+      let res = await api.get(`/admin/affiliates/${id}`);
+      if (!res.success && res.status === 404) {
+        res = await api.get(`/affiliate/admin/${id}`);
+      }
+      if (res.success && res.data) {
+        const data = res.data?.affiliate || res.data;
+        setAffiliate(data);
+        setCommRate(data.commission_rate !== undefined ? String(data.commission_rate) : '5');
       }
     } catch (err) {
       console.error(err);
@@ -32,10 +36,15 @@ export default function AffiliateDetailPage() {
   const handleSaveRate = async (e) => {
     e.preventDefault();
     try {
-      const res = await api.put(`/admin/affiliates/${id}/commission`, { commission_rate: parseFloat(commRate) });
+      let res = await api.put(`/admin/affiliates/${id}/commission`, { commission_rate: parseFloat(commRate) });
+      if (!res.success && res.status === 404) {
+        res = await api.put(`/affiliate/admin/${id}/commission`, { commission_rate: parseFloat(commRate) });
+      }
       if (res.success) {
         alert('Commission rate updated!');
         fetchAffiliate();
+      } else {
+        alert(res.message || 'Failed to update commission rate');
       }
     } catch (err) {
       alert(err.message || 'Failed to update commission rate');

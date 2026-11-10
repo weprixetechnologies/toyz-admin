@@ -11,7 +11,16 @@ export default function CouponsPage() {
     async function loadCoupons() {
       try {
         const res = await api.get('/admin/coupons');
-        if (res.success) setCoupons(res.data?.coupons || res.data || []);
+        if (res.success && res.data) {
+          const list = Array.isArray(res.data.coupons)
+            ? res.data.coupons
+            : Array.isArray(res.data)
+            ? res.data
+            : [];
+          setCoupons(list);
+        } else {
+          setCoupons([]);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -62,7 +71,7 @@ export default function CouponsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {coupons.map((c) => (
+              {(Array.isArray(coupons) ? coupons : []).map((c) => (
                 <tr key={c.id} className="hover:bg-slate-50">
                   <td className="p-4 font-mono font-bold text-indigo-600">{c.code}</td>
                   <td className="p-4">

@@ -12,7 +12,16 @@ export default function BrandsPage() {
   async function loadBrands() {
     setLoading(true);
     const res = await adminApi.get('/brands');
-    if (res.success) setBrands(res.data?.brands || res.data || []);
+    if (res.success && res.data) {
+      const list = Array.isArray(res.data.brands)
+        ? res.data.brands
+        : Array.isArray(res.data)
+        ? res.data
+        : [];
+      setBrands(list);
+    } else {
+      setBrands([]);
+    }
     setLoading(false);
   }
 
@@ -74,7 +83,7 @@ export default function BrandsPage() {
           <h3 className="font-bold text-slate-900 text-base">Registered Brands</h3>
           {loading ? (
             <p className="text-xs text-gray-400">Loading brands...</p>
-          ) : brands.length > 0 ? (
+          ) : Array.isArray(brands) && brands.length > 0 ? (
             <div className="divide-y divide-slate-100 text-xs">
               {brands.map((b) => (
                 <div key={b.id} className="py-3 flex justify-between items-center">

@@ -48,8 +48,15 @@ export default function BannersPage() {
     setLoading(true);
     try {
       const res = await api.get('/banners?is_active=all');
-      if (res.success) {
-        setBanners(res.data.banners || []);
+      if (res.success && res.data) {
+        const list = Array.isArray(res.data.banners)
+          ? res.data.banners
+          : Array.isArray(res.data)
+          ? res.data
+          : [];
+        setBanners(list);
+      } else {
+        setBanners([]);
       }
     } catch (err) {
       console.error(err);
@@ -213,7 +220,7 @@ export default function BannersPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 text-sm">
-            {banners.map(b => (
+            {(Array.isArray(banners) ? banners : []).map(b => (
               <tr key={b.id} className="hover:bg-gray-50">
                 <td className="py-3 px-4">
                   <img src={b.image_url} alt="banner" className="h-12 w-24 object-cover rounded border" />

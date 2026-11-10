@@ -57,8 +57,16 @@ export default function HomepageSectionManager() {
         adminApi.get('/homepage/admin/sections', { _t: Date.now() }),
         adminApi.get('/section-tags', { _t: Date.now() })
       ]);
-      if (secRes.success) setSections(secRes.data);
-      if (tagRes.success) setAvailableTags(tagRes.data);
+      if (secRes.success && secRes.data) {
+        setSections(Array.isArray(secRes.data) ? secRes.data : (secRes.data.sections || []));
+      } else {
+        setSections([]);
+      }
+      if (tagRes.success && tagRes.data) {
+        setAvailableTags(Array.isArray(tagRes.data) ? tagRes.data : (tagRes.data.tags || []));
+      } else {
+        setAvailableTags([]);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -267,7 +275,7 @@ export default function HomepageSectionManager() {
         </div>
       ) : (
         <div className="space-y-4">
-          {sections.map((sec) => (
+          {(Array.isArray(sections) ? sections : []).map((sec) => (
             <div 
               key={sec.id} 
               draggable

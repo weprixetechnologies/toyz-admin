@@ -16,8 +16,15 @@ export default function AdminProductsPage() {
     async function loadProducts() {
       setLoading(true);
       const res = await adminApi.get('/products', { limit: 50 });
-      if (res.success) {
-        setProducts(res.data?.products || res.data || []);
+      if (res.success && res.data) {
+        const list = Array.isArray(res.data.products)
+          ? res.data.products
+          : Array.isArray(res.data)
+          ? res.data
+          : [];
+        setProducts(list);
+      } else {
+        setProducts([]);
       }
       setLoading(false);
     }
@@ -38,14 +45,23 @@ export default function AdminProductsPage() {
     setIsDeleting(false);
     // Reload products
     const res = await adminApi.get('/products', { limit: 50 });
-    if (res.success) {
-      setProducts(res.data?.products || res.data || []);
+    if (res.success && res.data) {
+      const list = Array.isArray(res.data.products)
+        ? res.data.products
+        : Array.isArray(res.data)
+        ? res.data
+        : [];
+      setProducts(list);
+    } else {
+      setProducts([]);
     }
   };
 
   const handleExportCsv = async () => {
     window.open('https://backend.provokeplaytech.com/api/v1/products/export', '_blank');
   };
+
+  const safeProducts = Array.isArray(products) ? products : [];
 
   return (
     <div className="space-y-6">
@@ -90,7 +106,7 @@ export default function AdminProductsPage() {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-xs text-gray-400">Loading catalog items...</div>
-        ) : products.length > 0 ? (
+        ) : safeProducts.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-100">
@@ -99,10 +115,10 @@ export default function AdminProductsPage() {
                     <input
                       type="checkbox"
                       onChange={(e) => {
-                        if (e.target.checked) setSelectedProductIds(products.map(p => p.id));
+                        if (e.target.checked) setSelectedProductIds(safeProducts.map(p => p.id));
                         else setSelectedProductIds([]);
                       }}
-                      checked={products.length > 0 && selectedProductIds.length === products.length}
+                      checked={safeProducts.length > 0 && selectedProductIds.length === safeProducts.length}
                       className="rounded text-sky-600 focus:ring-sky-500"
                     />
                   </th>
@@ -115,7 +131,7 @@ export default function AdminProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {products.map((p) => (
+                {safeProducts.map((p) => (
                   <tr key={p.id} className="hover:bg-slate-50/50">
                     <td className="p-4">
                       <input

@@ -14,7 +14,16 @@ export default function OffersPage() {
     async function loadOffers() {
       setLoading(true);
       const res = await adminApi.get('/admin/offers');
-      if (res.success) setOffers(res.data?.offers || res.data || []);
+      if (res.success && res.data) {
+        const list = Array.isArray(res.data.offers)
+          ? res.data.offers
+          : Array.isArray(res.data)
+          ? res.data
+          : [];
+        setOffers(list);
+      } else {
+        setOffers([]);
+      }
       setLoading(false);
     }
     loadOffers();
@@ -71,7 +80,7 @@ export default function OffersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {offers.map((o) => (
+                {(Array.isArray(offers) ? offers : []).map((o) => (
                   <tr key={o.id} className="hover:bg-slate-50/50">
                     <td className="p-4 font-bold text-slate-900">{o.title || o.name}</td>
                     <td className="p-4 text-slate-600 font-semibold uppercase">{o.offer_type}</td>

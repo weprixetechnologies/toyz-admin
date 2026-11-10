@@ -434,8 +434,13 @@ export default function EditProductPage() {  const router = useRouter();
 
         // Load existing variants
         const vRes = await adminApi.get(`/products/${id}/variants`);
-        if (vRes.success && vRes.data?.variants) {
-          const vs = vRes.data.variants.map(v => ({
+        if (vRes.success && vRes.data) {
+          const rawVariants = Array.isArray(vRes.data.variants)
+            ? vRes.data.variants
+            : Array.isArray(vRes.data)
+            ? vRes.data
+            : [];
+          const vs = rawVariants.map(v => ({
             ...v,
             _key: Math.random().toString(36).slice(2)
           }));

@@ -11,7 +11,16 @@ export default function StaffListPage() {
     async function loadStaff() {
       try {
         const res = await api.get('/admin/staff');
-        if (res.success) setStaff(res.data || []);
+        if (res.success && res.data) {
+          const list = Array.isArray(res.data.staff)
+            ? res.data.staff
+            : Array.isArray(res.data)
+            ? res.data
+            : [];
+          setStaff(list);
+        } else {
+          setStaff([]);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -53,7 +62,7 @@ export default function StaffListPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {staff.map((s) => (
+              {(Array.isArray(staff) ? staff : []).map((s) => (
                 <tr key={s.id} className="hover:bg-slate-50">
                   <td className="p-4 font-bold text-slate-800">{s.name}</td>
                   <td className="p-4 text-slate-600">{s.email}</td>
