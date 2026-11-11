@@ -6,14 +6,28 @@ import { adminApi } from '../../../lib/api';
 import StatusBadge from '../../../components/StatusBadge';
 import { Briefcase, ArrowRight } from 'lucide-react';
 
+const inrFormatter = new Intl.NumberFormat('en-IN');
+
 export default function ResellerPendingQueuePage() {
   const [pendingOrders, setPendingOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const controller = new AbortController();
     async function loadPending() {
-      setLoading(true);
-      const res = await adminApi.get('/admin/orders/reseller-pending');
+      const endpoint = '/admin/orders/reseller-pending';
+      const cached = adminApi.getCached(endpoint);
+      if (cached && cached.success && cached.data) {
+        const cachedList = Array.isArray(cached.data.orders) ? cached.data.orders : [];
+        setPendingOrders(cachedList);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+
+      const res = await adminApi.get(endpoint, {}, { signal: controller.signal });
+      if (res?.aborted) return;
+
       if (res.success && res.data) {
         const list = Array.isArray(res.data.orders)
           ? res.data.orders
@@ -21,12 +35,13 @@ export default function ResellerPendingQueuePage() {
           ? res.data
           : [];
         setPendingOrders(list);
-      } else {
+      } else if (!cached) {
         setPendingOrders([]);
       }
       setLoading(false);
     }
     loadPending();
+    return () => controller.abort();
   }, []);
 
   return (
@@ -56,11 +71,15 @@ export default function ResellerPendingQueuePage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {pendingOrders.map((o) => (
-                  <tr key={o.id} className="hover:bg-slate-50/50">
+                  <tr
+                    key={o.id}
+                    className="hover:bg-slate-50/50"
+                    onMouseEnter={() => adminApi.prefetch(`/admin/orders/${o.id}`)}
+                  >
                     <td className="p-4 font-bold text-slate-900">{o.order_number}</td>
                     <td className="p-4 text-slate-700">{o.reseller_name || o.shipping_name || 'Retailer'}</td>
                     <td className="p-4"><StatusBadge status={o.status} /></td>
-                    <td className="p-4 font-bold text-slate-900">₹{parseFloat(o.grand_total || 0).toLocaleString('en-IN')}</td>
+                    <td className="p-4 font-bold text-slate-900">₹{inrFormatter.format(parseFloat(o.grand_total || 0))}</td>
                     <td className="p-4">
                       <Link href={`/orders/${o.id}/approve`} className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg inline-flex items-center gap-1">
                         Approve Items <ArrowRight size={14} />

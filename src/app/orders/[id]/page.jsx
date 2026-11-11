@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { adminApi, downloadAdminFile } from '../../../lib/api';
 import StatusBadge from '../../../components/StatusBadge';
@@ -30,21 +30,45 @@ export default function AdminOrderDetailPage() {
 
   const [downloadingInvoice, setDownloadingInvoice] = useState(false);
   const [downloadingSlip, setDownloadingSlip] = useState(false);
+  const abortRef = useRef(null);
 
-  async function loadDetail() {
-    setLoading(true);
-    const res = await adminApi.get(`/admin/orders/${id}`);
+  const loadDetail = useCallback(async ({ forceFresh = false } = {}) => {
+    if (!id) return;
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    const endpoint = `/admin/orders/${id}`;
+    const cached = !forceFresh ? adminApi.getCached(endpoint) : null;
+    if (cached && cached.success && cached.data) {
+      setOrderData(cached.data);
+      setStatus(cached.data.order?.status || 'pending');
+      setPaymentStatus(cached.data.order?.payment_status || 'pending');
+      setLoading(false);
+    } else if (!orderData) {
+      setLoading(true);
+    }
+
+    const res = await adminApi.get(endpoint, {}, {
+      signal: controller.signal,
+      skipCache: forceFresh
+    });
+    if (res?.aborted) return;
+
     if (res.success && res.data) {
       setOrderData(res.data);
       setStatus(res.data.order?.status || 'pending');
       setPaymentStatus(res.data.order?.payment_status || 'pending');
     }
     setLoading(false);
-  }
+  }, [id]);
 
   useEffect(() => {
     if (id) loadDetail();
-  }, [id]);
+    return () => {
+      if (abortRef.current) abortRef.current.abort();
+    };
+  }, [id, loadDetail]);
 
   if (loading) return <div className="p-12 text-center text-xs text-gray-400">Loading order detail...</div>;
   if (!orderData || !orderData.order) return <div className="p-12 text-center text-xs text-gray-500">Order not found.</div>;
@@ -58,7 +82,7 @@ export default function AdminOrderDetailPage() {
     if (res.success) {
       alert('Shipping cost updated successfully');
       setEditShipping(false);
-      loadDetail(); // reload
+      loadDetail({ forceFresh: true });
     } else {
       alert(res.message || 'Failed to update shipping cost');
     }
@@ -68,8 +92,9 @@ export default function AdminOrderDetailPage() {
     setStatusUpdating(true);
     const res = await adminApi.put(`/admin/orders/${id}/status`, { status });
     if (res.success) {
+      setOrderData((prev) => prev ? { ...prev, order: { ...prev.order, status } } : prev);
       alert(`Order status updated to '${status}'`);
-      loadDetail();
+      loadDetail({ forceFresh: true });
     } else {
       alert(res.message || 'Status update failed');
     }
@@ -80,8 +105,9 @@ export default function AdminOrderDetailPage() {
     setPaymentStatusUpdating(true);
     const res = await adminApi.put(`/admin/orders/${id}/payment-status`, { payment_status: paymentStatus });
     if (res.success) {
+      setOrderData((prev) => prev ? { ...prev, order: { ...prev.order, payment_status: paymentStatus } } : prev);
       alert(`Payment status updated to '${paymentStatus}'`);
-      loadDetail();
+      loadDetail({ forceFresh: true });
     } else {
       alert(res.message || 'Payment status update failed');
     }
@@ -95,7 +121,7 @@ export default function AdminOrderDetailPage() {
     });
     if (res.success) {
       setEditItemId(null);
-      loadDetail();
+      loadDetail({ forceFresh: true });
     } else {
       alert(res.message || 'Failed to update item quantity & price');
     }
@@ -126,7 +152,7 @@ export default function AdminOrderDetailPage() {
     if (res.success) {
       alert('Shipment dispatch recorded successfully!');
       setShowShipmentModal(false);
-      loadDetail();
+      loadDetail({ forceFresh: true });
     } else {
       alert(res.message || 'Failed to create shipment');
     }

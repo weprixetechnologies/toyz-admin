@@ -1,5 +1,57 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://backend.provokeplaytech.com/api/v1';
 
+// O(1) bounded LRU cache for GET responses + in-flight coalescing
+const MAX_CACHE_ENTRIES = 120;
+const DEFAULT_CACHE_TTL_MS = 30000;
+const responseCache = new Map();
+const inflightRequests = new Map();
+let refreshPromise = null;
+
+function buildEndpointUrl(url, params = {}) {
+  const entries = Object.entries(params || {}).filter(
+    ([, val]) => val !== undefined && val !== null && val !== ''
+  );
+  if (entries.length === 0) return url;
+  entries.sort(([a], [b]) => a.localeCompare(b));
+  const query = new URLSearchParams(entries).toString();
+  return query ? `${url}?${query}` : url;
+}
+
+function getCacheEntry(key) {
+  const entry = responseCache.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    responseCache.delete(key);
+    return null;
+  }
+  // Move to MRU tail in O(1)
+  responseCache.delete(key);
+  responseCache.set(key, entry);
+  return entry.data;
+}
+
+function setCacheEntry(key, data, ttlMs = DEFAULT_CACHE_TTL_MS) {
+  if (responseCache.has(key)) {
+    responseCache.delete(key);
+  } else if (responseCache.size >= MAX_CACHE_ENTRIES) {
+    const oldestKey = responseCache.keys().next().value;
+    if (oldestKey !== undefined) responseCache.delete(oldestKey);
+  }
+  responseCache.set(key, { data, expiresAt: Date.now() + ttlMs });
+}
+
+function invalidateCache(prefix = '') {
+  if (!prefix) {
+    responseCache.clear();
+    return;
+  }
+  for (const key of responseCache.keys()) {
+    if (key.startsWith(prefix)) {
+      responseCache.delete(key);
+    }
+  }
+}
+
 export function getAdminToken() {
   if (typeof window !== 'undefined') {
     return localStorage.getItem('admin_access_token') || '';
@@ -54,6 +106,42 @@ export function setAdminProfile(user) {
   }
 }
 
+async function refreshAdminSession() {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    const refreshToken = getAdminRefreshToken();
+    if (!refreshToken) return false;
+    try {
+      const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken })
+      });
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json();
+        if (refreshData.success && refreshData.data && refreshData.data.tokens) {
+          setAdminToken(refreshData.data.tokens.accessToken || refreshData.data.tokens.access_token);
+          setAdminRefreshToken(refreshData.data.tokens.refreshToken || refreshData.data.tokens.refresh_token);
+          return true;
+        }
+      }
+      setAdminToken('');
+      setAdminRefreshToken('');
+      setAdminProfile(null);
+      return false;
+    } catch (e) {
+      console.error('Refresh token failed', e);
+      setAdminToken('');
+      setAdminRefreshToken('');
+      setAdminProfile(null);
+      return false;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+  return refreshPromise;
+}
+
 export async function fetchAdminApi(endpoint, options = {}, isRetry = false) {
   const token = getAdminToken();
   const headers = {
@@ -66,6 +154,7 @@ export async function fetchAdminApi(endpoint, options = {}, isRetry = false) {
   const config = {
     method: options.method || 'GET',
     headers,
+    ...(options.signal ? { signal: options.signal } : {}),
     ...(options.body ? { body: typeof options.body === 'string' ? options.body : JSON.stringify(options.body) } : {})
   };
 
@@ -82,32 +171,9 @@ export async function fetchAdminApi(endpoint, options = {}, isRetry = false) {
     if (!response.ok) {
       // Handle Token Expiry (skip refreshing for auth endpoints)
       if (response.status === 401 && !isRetry && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/refresh')) {
-        const refreshToken = getAdminRefreshToken();
-        if (refreshToken) {
-          try {
-            const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ refreshToken })
-            });
-            if (refreshRes.ok) {
-              const refreshData = await refreshRes.json();
-              if (refreshData.success && refreshData.data && refreshData.data.tokens) {
-                setAdminToken(refreshData.data.tokens.accessToken || refreshData.data.tokens.access_token);
-                setAdminRefreshToken(refreshData.data.tokens.refreshToken || refreshData.data.tokens.refresh_token);
-                return fetchAdminApi(endpoint, options, true);
-              }
-            } else {
-              setAdminToken('');
-              setAdminRefreshToken('');
-              setAdminProfile(null);
-            }
-          } catch (e) {
-            console.error('Refresh token failed', e);
-            setAdminToken('');
-            setAdminRefreshToken('');
-            setAdminProfile(null);
-          }
+        const refreshed = await refreshAdminSession();
+        if (refreshed) {
+          return fetchAdminApi(endpoint, options, true);
         }
       }
 
@@ -123,6 +189,9 @@ export async function fetchAdminApi(endpoint, options = {}, isRetry = false) {
 
     return typeof data === 'object' ? data : { success: true, data };
   } catch (err) {
+    if (err && err.name === 'AbortError') {
+      return { success: false, aborted: true, status: 0, message: 'Request aborted', data: null };
+    }
     console.error(`[Admin API Error] ${endpoint}:`, err);
     return {
       success: false,
@@ -135,14 +204,73 @@ export async function fetchAdminApi(endpoint, options = {}, isRetry = false) {
 
 export const adminApi = {
   baseURL: API_BASE_URL,
-  get: (url, params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    const fullUrl = query ? `${url}?${query}` : url;
-    return fetchAdminApi(fullUrl, { method: 'GET' });
+  getCached: (url, params = {}) => {
+    const fullUrl = buildEndpointUrl(url, params);
+    return getCacheEntry(fullUrl);
   },
-  post: (url, body) => fetchAdminApi(url, { method: 'POST', body }),
-  put: (url, body) => fetchAdminApi(url, { method: 'PUT', body }),
-  delete: (url, options = {}) => fetchAdminApi(url, { method: 'DELETE', ...(options.data ? { body: options.data } : {}) })
+  invalidateCache,
+  prefetch: (url, params = {}, ttlMs = DEFAULT_CACHE_TTL_MS) => {
+    const fullUrl = buildEndpointUrl(url, params);
+    if (getCacheEntry(fullUrl) || inflightRequests.has(fullUrl)) return;
+    const req = fetchAdminApi(fullUrl, { method: 'GET' })
+      .then((res) => {
+        if (res && res.success) {
+          setCacheEntry(fullUrl, res, ttlMs);
+        }
+        return res;
+      })
+      .finally(() => {
+        inflightRequests.delete(fullUrl);
+      });
+    inflightRequests.set(fullUrl, req);
+  },
+  get: (url, params = {}, options = {}) => {
+    const fullUrl = buildEndpointUrl(url, params);
+    const { signal, skipCache = false, cacheTtlMs = DEFAULT_CACHE_TTL_MS } = options;
+
+    // Coalesce concurrent GETs without an AbortSignal (or run directly with signal)
+    if (!signal && inflightRequests.has(fullUrl)) {
+      return inflightRequests.get(fullUrl);
+    }
+
+    const reqPromise = fetchAdminApi(fullUrl, { method: 'GET', signal }).then((res) => {
+      if (res && res.success && !skipCache) {
+        setCacheEntry(fullUrl, res, cacheTtlMs);
+      }
+      return res;
+    });
+
+    if (!signal) {
+      inflightRequests.set(fullUrl, reqPromise);
+      reqPromise.finally(() => inflightRequests.delete(fullUrl));
+    }
+
+    return reqPromise;
+  },
+  post: async (url, body) => {
+    const res = await fetchAdminApi(url, { method: 'POST', body });
+    if (res && res.success) {
+      const resourcePrefix = '/' + url.split('/').filter(Boolean).slice(0, 2).join('/');
+      invalidateCache(resourcePrefix);
+    }
+    return res;
+  },
+  put: async (url, body) => {
+    const res = await fetchAdminApi(url, { method: 'PUT', body });
+    if (res && res.success) {
+      const resourcePrefix = '/' + url.split('/').filter(Boolean).slice(0, 2).join('/');
+      invalidateCache(resourcePrefix);
+    }
+    return res;
+  },
+  delete: async (url, options = {}) => {
+    const res = await fetchAdminApi(url, { method: 'DELETE', ...(options.data ? { body: options.data } : {}) });
+    if (res && res.success) {
+      const resourcePrefix = '/' + url.split('/').filter(Boolean).slice(0, 2).join('/');
+      invalidateCache(resourcePrefix);
+    }
+    return res;
+  }
 };
 
 export async function downloadAdminFile(endpoint, defaultFilename = 'document.pdf') {

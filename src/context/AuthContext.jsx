@@ -41,9 +41,10 @@ export function AuthProvider({ children }) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-      adminApi.get('/users/profile')
+      adminApi.get('/users/profile', {}, { signal: controller.signal, skipCache: true })
         .then((res) => {
           clearTimeout(timeoutId);
+          if (res?.aborted) return;
           if (res.success && res.data) {
             const userData = res.data.user || res.data;
             if (userData && isAuthorizedAdminRole(userData.role)) {
@@ -59,6 +60,11 @@ export function AuthProvider({ children }) {
         .catch(() => {
           clearTimeout(timeoutId);
         });
+
+      return () => {
+        clearTimeout(timeoutId);
+        controller.abort();
+      };
     } else if (!savedUser) {
       setAdmin(null);
     }
