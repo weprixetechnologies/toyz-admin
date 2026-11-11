@@ -1,8 +1,9 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://backend.provokeplaytech.com/api/v1';
 
-// O(1) bounded LRU cache for GET responses + in-flight coalescing
+// O(1) bounded LRU cache for GET responses + L2 sessionStorage SWR persistence + in-flight coalescing
 const MAX_CACHE_ENTRIES = 120;
 const DEFAULT_CACHE_TTL_MS = 30000;
+const SESSION_CACHE_PREFIX = 'weprixe_api_cache:';
 const responseCache = new Map();
 const inflightRequests = new Map();
 let refreshPromise = null;
@@ -17,17 +18,68 @@ function buildEndpointUrl(url, params = {}) {
   return query ? `${url}?${query}` : url;
 }
 
-function getCacheEntry(key) {
-  const entry = responseCache.get(key);
-  if (!entry) return null;
-  if (entry.expiresAt <= Date.now()) {
-    responseCache.delete(key);
+function readSessionCache(key) {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(SESSION_CACHE_PREFIX + key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || parsed.expiresAt <= Date.now()) {
+      sessionStorage.removeItem(SESSION_CACHE_PREFIX + key);
+      return null;
+    }
+    return parsed;
+  } catch {
     return null;
   }
-  // Move to MRU tail in O(1)
-  responseCache.delete(key);
-  responseCache.set(key, entry);
-  return entry.data;
+}
+
+function writeSessionCache(key, entry) {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(SESSION_CACHE_PREFIX + key, JSON.stringify(entry));
+  } catch {
+    // Ignore sessionStorage quota or private-browsing errors
+  }
+}
+
+function clearSessionCache(prefix = '') {
+  if (typeof window === 'undefined') return;
+  try {
+    const matchPrefix = SESSION_CACHE_PREFIX + prefix;
+    for (let i = sessionStorage.length - 1; i >= 0; i -= 1) {
+      const k = sessionStorage.key(i);
+      if (k && k.startsWith(prefix ? matchPrefix : SESSION_CACHE_PREFIX)) {
+        sessionStorage.removeItem(k);
+      }
+    }
+  } catch {
+    // Ignore storage access errors
+  }
+}
+
+function getCacheEntry(key) {
+  let entry = responseCache.get(key);
+  if (entry) {
+    if (entry.expiresAt <= Date.now()) {
+      responseCache.delete(key);
+      entry = null;
+    } else {
+      // Move to MRU tail in O(1)
+      responseCache.delete(key);
+      responseCache.set(key, entry);
+      return entry.data;
+    }
+  }
+
+  const sessionEntry = readSessionCache(key);
+  if (!sessionEntry) return null;
+  if (responseCache.size >= MAX_CACHE_ENTRIES) {
+    const oldestKey = responseCache.keys().next().value;
+    if (oldestKey !== undefined) responseCache.delete(oldestKey);
+  }
+  responseCache.set(key, sessionEntry);
+  return sessionEntry.data;
 }
 
 function setCacheEntry(key, data, ttlMs = DEFAULT_CACHE_TTL_MS) {
@@ -37,12 +89,15 @@ function setCacheEntry(key, data, ttlMs = DEFAULT_CACHE_TTL_MS) {
     const oldestKey = responseCache.keys().next().value;
     if (oldestKey !== undefined) responseCache.delete(oldestKey);
   }
-  responseCache.set(key, { data, expiresAt: Date.now() + ttlMs });
+  const entry = { data, expiresAt: Date.now() + ttlMs };
+  responseCache.set(key, entry);
+  writeSessionCache(key, entry);
 }
 
 function invalidateCache(prefix = '') {
   if (!prefix) {
     responseCache.clear();
+    clearSessionCache('');
     return;
   }
   for (const key of responseCache.keys()) {
@@ -50,6 +105,7 @@ function invalidateCache(prefix = '') {
       responseCache.delete(key);
     }
   }
+  clearSessionCache(prefix);
 }
 
 export function getAdminToken() {
@@ -208,7 +264,12 @@ export const adminApi = {
     const fullUrl = buildEndpointUrl(url, params);
     return getCacheEntry(fullUrl);
   },
+  setCached: (url, params = {}, data = null, ttlMs = DEFAULT_CACHE_TTL_MS) => {
+    const fullUrl = buildEndpointUrl(url, params);
+    if (data !== null) setCacheEntry(fullUrl, data, ttlMs);
+  },
   invalidateCache,
+  clearCache: () => invalidateCache(''),
   prefetch: (url, params = {}, ttlMs = DEFAULT_CACHE_TTL_MS) => {
     const fullUrl = buildEndpointUrl(url, params);
     if (getCacheEntry(fullUrl) || inflightRequests.has(fullUrl)) return;

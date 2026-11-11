@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAdminAuth, isAuthorizedAdminRole } from '../context/AuthContext';
+import { adminApi } from '../lib/api';
 import {
   LayoutDashboard, ShoppingBag, Package, Layers, Tag, CreditCard,
   Percent, Users, Briefcase, Award, Truck, BarChart3, ShieldCheck,
@@ -13,6 +14,20 @@ import {
   Ticket, Image, PanelsTopLeft, Hash, Compass, Smartphone, AlertTriangle,
   Globe, Store, Radio
 } from 'lucide-react';
+
+const ROUTE_PREFETCH_API = {
+  '/orders': ['/admin/orders', { page: 1, limit: 20 }],
+  '/orders/reseller-pending': ['/admin/orders/reseller-pending', {}],
+  '/shipping/presets': ['/admin/shipping/presets', {}, 300000],
+  '/products': ['/products', { page: 1, limit: 20 }],
+};
+
+function prefetchRouteData(href) {
+  const target = ROUTE_PREFETCH_API[href];
+  if (target) {
+    adminApi.prefetch(...target);
+  }
+}
 
 const NAV_SECTIONS = [
   {
@@ -368,6 +383,8 @@ export default function AdminLayout({ children }) {
                           <Link
                             key={item.href}
                             href={item.href}
+                            onMouseEnter={() => prefetchRouteData(item.href)}
+                            onFocus={() => prefetchRouteData(item.href)}
                             title={isSidebarCollapsed ? `${item.label} (${section.title})` : undefined}
                             className={`group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 ${
                               active

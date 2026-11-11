@@ -1,36 +1,84 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import api from '@/lib/api';
+
+const PRESETS_ENDPOINT = '/admin/shipping/presets';
+const PRESETS_CACHE_TTL_MS = 300000;
+
+function extractPresetList(res) {
+  if (!res?.success || !res?.data) return [];
+  if (Array.isArray(res.data.presets)) return res.data.presets;
+  if (Array.isArray(res.data)) return res.data;
+  return [];
+}
+
+const PresetRow = memo(function PresetRow({ preset, onDelete }) {
+  return (
+    <tr className="hover:bg-slate-50">
+      <td className="p-4 font-bold text-slate-800">{preset.label}</td>
+      <td className="p-4 font-bold text-emerald-700">{Number(preset.cost) === 0 ? 'FREE' : `₹${preset.cost}`}</td>
+      <td className="p-4 text-slate-600">{preset.estimated_days || 'Standard'}</td>
+      <td className="p-4">
+        <button
+          onClick={() => onDelete(preset.id)}
+          className="text-red-600 hover:underline font-medium text-xs"
+        >
+          Delete
+        </button>
+      </td>
+    </tr>
+  );
+});
 
 export default function ShippingPresetsPage() {
   const [presets, setPresets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [form, setForm] = useState({ label: '', cost: '', estimated_days: '', is_active: true });
   const [saving, setSaving] = useState(false);
 
-  const fetchPresets = async () => {
+  const fetchPresets = useCallback(async (signal) => {
     try {
-      const res = await api.get('/admin/shipping/presets');
+      const res = await api.get(PRESETS_ENDPOINT, {}, {
+        signal,
+        cacheTtlMs: PRESETS_CACHE_TTL_MS
+      });
+      if (res?.aborted || signal?.aborted) return;
       if (res.success && res.data) {
-        const list = Array.isArray(res.data.presets)
-          ? res.data.presets
-          : Array.isArray(res.data)
-          ? res.data
-          : [];
-        setPresets(list);
+        setPresets(extractPresetList(res));
       } else {
-        setPresets([]);
+        setPresets((prev) => (prev.length > 0 ? prev : []));
       }
     } catch (err) {
-      console.error(err);
+      if (err?.name !== 'AbortError') console.error(err);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+        setSyncing(false);
+      }
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchPresets();
-  }, []);
+    const controller = new AbortController();
+    const cached = api.getCached(PRESETS_ENDPOINT);
+    if (cached && cached.success && cached.data) {
+      setPresets(extractPresetList(cached));
+      setLoading(false);
+      setSyncing(true);
+    }
+    fetchPresets(controller.signal);
+    return () => controller.abort();
+  }, [fetchPresets]);
+
+  const syncCachedPresets = (nextList) => {
+    api.setCached(
+      PRESETS_ENDPOINT,
+      {},
+      { success: true, data: { presets: nextList } },
+      PRESETS_CACHE_TTL_MS
+    );
+  };
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -40,13 +88,27 @@ export default function ShippingPresetsPage() {
     }
     setSaving(true);
     try {
-      const res = await api.post('/admin/shipping/presets', {
+      const res = await api.post(PRESETS_ENDPOINT, {
         ...form,
+        label: form.label.trim(),
         cost: parseFloat(form.cost),
       });
       if (res.success) {
         setForm({ label: '', cost: '', estimated_days: '', is_active: true });
-        fetchPresets();
+        const createdPreset = res.data?.id ? res.data : res.data?.preset;
+        if (createdPreset) {
+          setPresets((prev) => {
+            const exists = prev.some((p) => p.id === createdPreset.id || p.label === createdPreset.label);
+            const next = exists
+              ? prev.map((p) => (p.id === createdPreset.id || p.label === createdPreset.label ? createdPreset : p))
+              : [...prev, createdPreset];
+            syncCachedPresets(next);
+            return next;
+          });
+        } else {
+          setSyncing(true);
+          fetchPresets();
+        }
       }
     } catch (err) {
       alert(err.message || 'Failed to create preset');
@@ -55,15 +117,21 @@ export default function ShippingPresetsPage() {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = useCallback(async (id) => {
     if (!confirm('Delete this shipping option?')) return;
     try {
-      const res = await api.delete(`/admin/shipping/presets/${id}`);
-      if (res.success) fetchPresets();
+      const res = await api.delete(`${PRESETS_ENDPOINT}/${id}`);
+      if (res.success) {
+        setPresets((prev) => {
+          const next = prev.filter((p) => p.id !== id);
+          syncCachedPresets(next);
+          return next;
+        });
+      }
     } catch (err) {
       alert(err.message || 'Failed to delete preset');
     }
-  };
+  }, []);
 
   return (
     <>
@@ -72,6 +140,11 @@ export default function ShippingPresetsPage() {
           <h1 className="text-2xl font-bold text-slate-800">Shipping Options & Presets</h1>
           <p className="text-slate-500 text-sm">Configure shipping options, costs, and delivery estimates for checkout</p>
         </div>
+        {syncing && (
+          <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
+            Syncing...
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -139,19 +212,7 @@ export default function ShippingPresetsPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
                 {(Array.isArray(presets) ? presets : []).map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50">
-                    <td className="p-4 font-bold text-slate-800">{p.label}</td>
-                    <td className="p-4 font-bold text-emerald-700">{Number(p.cost) === 0 ? 'FREE' : `₹${p.cost}`}</td>
-                    <td className="p-4 text-slate-600">{p.estimated_days || 'Standard'}</td>
-                    <td className="p-4">
-                      <button
-                        onClick={() => handleDelete(p.id)}
-                        className="text-red-600 hover:underline font-medium text-xs"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
+                  <PresetRow key={p.id} preset={p} onDelete={handleDelete} />
                 ))}
               </tbody>
             </table>

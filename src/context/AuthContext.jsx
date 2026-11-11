@@ -14,6 +14,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const logout = () => {
+    adminApi.clearCache();
     setAdminRefreshToken('');
     setAdminToken('');
     setAdminProfile(null);
