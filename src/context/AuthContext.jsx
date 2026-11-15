@@ -40,7 +40,7 @@ export function AuthProvider({ children }) {
     // Verify token in background if token exists
     if (token) {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       adminApi.get('/users/profile', {}, { signal: controller.signal, skipCache: true })
         .then((res) => {
@@ -73,7 +73,7 @@ export function AuthProvider({ children }) {
 
   const login = (token, userData, refreshToken) => {
     const cleanUser = userData?.user || userData;
-    if (refreshToken) setAdminRefreshToken(refreshToken);
+    setAdminRefreshToken(refreshToken || '');
     setAdminToken(token);
     setAdmin(cleanUser);
     setAdminProfile(cleanUser);

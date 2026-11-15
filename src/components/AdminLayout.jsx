@@ -12,7 +12,7 @@ import {
   Inbox, Bot, ChevronDown, ChevronRight, ChevronsLeft, ChevronsRight, Menu, X,
   ExternalLink, Sparkles, Clock, Share2, FolderTree, FileSpreadsheet,
   Ticket, Image, PanelsTopLeft, Hash, Compass, Smartphone, AlertTriangle,
-  Globe, Store, Radio
+  Globe, Store, Radio, FileText
 } from 'lucide-react';
 
 const ROUTE_PREFETCH_API = {
@@ -47,7 +47,6 @@ const NAV_SECTIONS = [
       { label: 'Reseller Queue', href: '/orders/reseller-pending', icon: Clock, badge: 'Queue', badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
       { label: 'Users & Customers', href: '/users', icon: Users, exact: true },
       { label: 'Inquiries & Leads', href: '/leads', icon: Inbox, badge: 'New', badgeColor: 'bg-sky-500/20 text-sky-300 border-sky-500/30' },
-      { label: 'Reseller Accounts', href: '/users/resellers', icon: Briefcase },
       { label: 'Affiliates Program', href: '/users/affiliates', icon: Share2 },
     ],
   },
@@ -79,6 +78,7 @@ const NAV_SECTIONS = [
     title: 'Storefront & Design',
     items: [
       { label: 'Homepage Layout', href: '/homepage-layout', icon: PanelsTopLeft },
+      { label: 'Policy Maker & Legal', href: '/policies', icon: FileText, badge: 'Legal', badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' },
       { label: 'Section Tags', href: '/section-tags', icon: Hash },
       { label: 'Header & Logo', href: '/settings/header', icon: PanelTop },
       { label: 'Footer Settings', href: '/settings/footer', icon: PanelBottom },

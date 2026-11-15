@@ -1,23 +1,28 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { adminApi } from '../../lib/api';
 import toast from 'react-hot-toast';
 import {
   Users, Search, ShoppingBag, Eye, Ban, CheckCircle2, MapPin,
   Briefcase, ShieldCheck, Mail, Phone, Calendar, CreditCard,
-  X, ChevronRight, RefreshCw, Filter, Tag, ArrowUpRight, DollarSign
+  X, ChevronRight, RefreshCw, Filter, Tag, ArrowUpRight, DollarSign,
+  Percent, AlertCircle, Save, Check, XCircle
 } from 'lucide-react';
 
-export default function CustomersAndResellersPage() {
+function CustomersContent() {
+  const searchParams = useSearchParams();
+  const urlRole = searchParams.get('role');
+
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
 
   // Filters
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState(''); // '' (all), 'customer', 'retailer', 'admin'
+  const [roleFilter, setRoleFilter] = useState(urlRole || ''); // '' (all), 'customer', 'retailer', 'admin'
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -26,6 +31,17 @@ export default function CustomersAndResellersPage() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [userDetailLoading, setUserDetailLoading] = useState(false);
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
+
+  // Reseller detail inputs inside drawer
+  const [resellerDiscount, setResellerDiscount] = useState('');
+  const [resellerCreditLimit, setResellerCreditLimit] = useState('');
+  const [resellerBusinessName, setResellerBusinessName] = useState('');
+  const [resellerGstin, setResellerGstin] = useState('');
+  const [resellerPan, setResellerPan] = useState('');
+  const [resellerAddress, setResellerAddress] = useState('');
+  const [resellerStatus, setResellerStatus] = useState('approved');
+  const [savingReseller, setSavingReseller] = useState(false);
+  const [showResellerFormForCustomer, setShowResellerFormForCustomer] = useState(false);
 
   // Orders Modal State
   const [ordersModalUser, setOrdersModalUser] = useState(null);
@@ -67,14 +83,81 @@ export default function CustomersAndResellersPage() {
   async function handleViewCustomerDetails(userId) {
     setIsDetailDrawerOpen(true);
     setUserDetailLoading(true);
+    setShowResellerFormForCustomer(false);
     const res = await adminApi.get(`/users/${userId}`);
-    if (res.success) {
-      setSelectedUser(res.data?.user || null);
+    if (res.success && res.data?.user) {
+      const u = res.data.user;
+      setSelectedUser(u);
+      const rp = u.reseller_profile;
+      setResellerDiscount(rp?.global_discount_value !== undefined ? String(rp.global_discount_value) : '');
+      setResellerCreditLimit(rp?.credit_limit !== undefined ? String(rp.credit_limit) : '');
+      setResellerBusinessName(rp?.business_name || u.name || '');
+      setResellerGstin(rp?.gstin || u.gstin || '');
+      setResellerPan(rp?.pan || '');
+      setResellerAddress(rp?.address || '');
+      setResellerStatus(rp?.status || (u.role === 'retailer' ? 'approved' : 'pending'));
     } else {
       toast.error('Failed to load user details');
       setIsDetailDrawerOpen(false);
     }
     setUserDetailLoading(false);
+  }
+
+  async function handleSaveResellerSettings(overrideStatus = null, rejectionReason = null) {
+    if (!selectedUser) return;
+    setSavingReseller(true);
+    try {
+      const statusToUse = overrideStatus || resellerStatus;
+      const payload = {
+        global_discount_value: parseFloat(resellerDiscount || 0),
+        discount_type: 'percent',
+        credit_limit: parseFloat(resellerCreditLimit || 0),
+        business_name: resellerBusinessName,
+        gstin: resellerGstin,
+        pan: resellerPan,
+        address: resellerAddress,
+        status: statusToUse,
+        ...(rejectionReason && { rejection_reason: rejectionReason })
+      };
+
+      const res = await adminApi.put(`/users/${selectedUser.id}/reseller-profile`, payload);
+      if (res.success) {
+        toast.success(res.message || 'Reseller profile & % discount saved successfully!');
+        if (res.data?.reseller_profile) {
+          const updatedRp = res.data.reseller_profile;
+          setSelectedUser(prev => ({
+            ...prev,
+            role: statusToUse === 'approved' ? 'retailer' : prev.role,
+            reseller_profile: updatedRp
+          }));
+          setResellerStatus(updatedRp.status);
+          setResellerDiscount(String(updatedRp.global_discount_value || 0));
+          setResellerCreditLimit(String(updatedRp.credit_limit || 0));
+        }
+        fetchUsers();
+      } else {
+        toast.error(res.message || 'Failed to update reseller settings');
+      }
+    } catch (err) {
+      toast.error(err.message || 'Error updating reseller profile');
+    } finally {
+      setSavingReseller(false);
+    }
+  }
+
+  async function handleApproveReseller() {
+    await handleSaveResellerSettings('approved');
+  }
+
+  async function handleRejectReseller() {
+    const reason = prompt('Please enter rejection reason for this reseller application:');
+    if (reason === null) return;
+    await handleSaveResellerSettings('rejected', reason);
+  }
+
+  async function handleSuspendReseller() {
+    if (!confirm('Are you sure you want to suspend this reseller account? Their role will revert to regular customer.')) return;
+    await handleSaveResellerSettings('suspended');
   }
 
   async function handleFetchAccountOrders(userId, userName, userEmail, userRole) {
@@ -142,7 +225,7 @@ export default function CustomersAndResellersPage() {
             <Users className="text-sky-600" /> Customers & Account Directory
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Overview of all registered retail customers, reseller profiles, and administrative accounts
+            Manage retail customers, wholesale reseller profiles, discount percentages, credits & accounts
           </p>
         </div>
       </div>
@@ -255,21 +338,33 @@ export default function CustomersAndResellersPage() {
                                 </span>
                               )}
                             </div>
-                            <div className="text-[11px] text-slate-400 font-mono">ID: #{u.id} • Registered {new Date(u.created_at).toLocaleDateString('en-IN')}</div>
+                            <div className="text-[11px] text-slate-400 font-mono">
+                              ID: #{u.id} • Registered {new Date(u.created_at).toLocaleDateString('en-IN')}
+                            </div>
                           </div>
                         </div>
                       </td>
 
-                      {/* Role */}
+                      {/* Role & Reseller Discount % */}
                       <td className="p-4">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide ${
-                          isReseller ? 'bg-purple-100 text-purple-800 border border-purple-200' :
-                          isAdmin ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
-                          'bg-sky-100 text-sky-800 border border-sky-200'
-                        }`}>
-                          {isReseller ? <Briefcase size={12} /> : isAdmin ? <ShieldCheck size={12} /> : <Users size={12} />}
-                          {u.role === 'retailer' ? 'Reseller / B2B' : u.role}
-                        </span>
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide ${
+                            isReseller ? 'bg-purple-100 text-purple-800 border border-purple-200' :
+                            isAdmin ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+                            'bg-sky-100 text-sky-800 border border-sky-200'
+                          }`}>
+                            {isReseller ? <Briefcase size={12} /> : isAdmin ? <ShieldCheck size={12} /> : <Users size={12} />}
+                            {u.role === 'retailer' ? 'Reseller / B2B' : u.role}
+                          </span>
+                          {isReseller && (
+                            <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 flex items-center gap-1">
+                              <Percent size={10} />
+                              {u.reseller_discount_pct !== null && u.reseller_discount_pct !== undefined
+                                ? `${parseFloat(u.reseller_discount_pct)}% Discount`
+                                : '0% Set'}
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Contact */}
@@ -323,7 +418,7 @@ export default function CustomersAndResellersPage() {
                           <button
                             onClick={() => handleViewCustomerDetails(u.id)}
                             className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition"
-                            title="View Full Profile Details"
+                            title="View Full Profile Details & Reseller Settings"
                           >
                             <Eye size={16} />
                           </button>
@@ -403,7 +498,6 @@ export default function CustomersAndResellersPage() {
 
             {/* Content Body */}
             <div className="p-6 flex-1 overflow-y-auto space-y-4">
-              {/* Account Orders Metrics Banner */}
               {userOrdersSummary && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
                   <div>
@@ -425,7 +519,6 @@ export default function CustomersAndResellersPage() {
                 </div>
               )}
 
-              {/* Orders List Table */}
               {ordersLoading ? (
                 <div className="p-12 text-center text-xs text-slate-400 font-semibold flex flex-col items-center justify-center gap-2">
                   <RefreshCw size={24} className="animate-spin text-sky-600" />
@@ -516,7 +609,7 @@ export default function CustomersAndResellersPage() {
         </div>
       )}
 
-      {/* ─── CUSTOMER DETAIL DRAWER / MODAL ────────────────────────────────────── */}
+      {/* ─── CUSTOMER DETAIL & RESELLER SETTINGS DRAWER ─────────────────────────── */}
       {isDetailDrawerOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-end">
           <div className="bg-white w-full max-w-xl h-full flex flex-col shadow-2xl overflow-hidden border-l border-slate-200">
@@ -540,7 +633,9 @@ export default function CustomersAndResellersPage() {
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
                 {/* User Header Profile */}
                 <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                  <div className="w-14 h-14 rounded-full bg-sky-600 text-white font-black text-xl flex items-center justify-center uppercase shadow">
+                  <div className={`w-14 h-14 rounded-full text-white font-black text-xl flex items-center justify-center uppercase shadow ${
+                    selectedUser.role === 'retailer' ? 'bg-purple-600' : 'bg-sky-600'
+                  }`}>
                     {selectedUser.avatar ? (
                       <img src={selectedUser.avatar} alt={selectedUser.name} className="w-full h-full rounded-full object-cover" />
                     ) : (
@@ -551,8 +646,10 @@ export default function CustomersAndResellersPage() {
                     <h4 className="font-black text-slate-900 text-lg">{selectedUser.name}</h4>
                     <div className="text-xs text-slate-500 font-medium">{selectedUser.email}</div>
                     <div className="mt-1 flex items-center gap-2">
-                      <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-sky-100 text-sky-800 rounded-full">
-                        {selectedUser.role}
+                      <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                        selectedUser.role === 'retailer' ? 'bg-purple-100 text-purple-800 border border-purple-200' : 'bg-sky-100 text-sky-800'
+                      }`}>
+                        {selectedUser.role === 'retailer' ? 'Reseller / Retailer' : selectedUser.role}
                       </span>
                       <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
                         selectedUser.status === 'banned' ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'
@@ -562,6 +659,198 @@ export default function CustomersAndResellersPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* ─── RESELLER ACCOUNT DETAIL & DISCOUNT % CONFIGURATION ─── */}
+                {(selectedUser.role === 'retailer' || selectedUser.reseller_profile || showResellerFormForCustomer) ? (
+                  <div className="space-y-4 bg-purple-50/60 p-5 rounded-2xl border-2 border-purple-200 shadow-sm">
+                    <div className="flex items-center justify-between border-b border-purple-200 pb-3">
+                      <div className="flex items-center gap-2">
+                        <Briefcase className="text-purple-700" size={18} />
+                        <h5 className="text-sm font-black text-purple-900">Reseller Account Details & %</h5>
+                      </div>
+                      <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${
+                        resellerStatus === 'approved' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                        resellerStatus === 'pending' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                        resellerStatus === 'suspended' ? 'bg-red-100 text-red-800 border-red-200' :
+                        'bg-slate-100 text-slate-700 border-slate-200'
+                      }`}>
+                        {resellerStatus}
+                      </span>
+                    </div>
+
+                    {/* Reseller Discount % Input */}
+                    <div className="bg-white p-3.5 rounded-xl border border-purple-200 shadow-sm space-y-2">
+                      <label className="block text-xs font-black text-purple-900 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Percent size={14} className="text-purple-600" />
+                          Reseller Wholesale Discount Percentage (%)
+                        </span>
+                        <span className="text-[10px] text-purple-600 font-normal">Off Base Price</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          placeholder="e.g. 15 for 15% margin/discount"
+                          value={resellerDiscount}
+                          onChange={(e) => setResellerDiscount(e.target.value)}
+                          className="w-full pl-3 pr-10 py-2 border border-purple-200 rounded-xl text-sm font-bold text-purple-900 focus:outline-none focus:border-purple-600 bg-purple-50/20"
+                        />
+                        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 font-black text-purple-600 text-xs">%</span>
+                      </div>
+                      {/* Presets */}
+                      <div className="flex items-center gap-1.5 pt-1">
+                        <span className="text-[10px] text-slate-400 font-medium">Quick set:</span>
+                        {[5, 10, 15, 20, 25, 30].map(pct => (
+                          <button
+                            key={pct}
+                            type="button"
+                            onClick={() => setResellerDiscount(String(pct))}
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${
+                              resellerDiscount === String(pct)
+                                ? 'bg-purple-600 text-white'
+                                : 'bg-slate-100 text-slate-600 hover:bg-purple-100 hover:text-purple-700'
+                            }`}
+                          >
+                            {pct}%
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Credit Limit & Used */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-white p-3 rounded-xl border border-purple-200 shadow-sm">
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Credit Limit (₹)</label>
+                        <input
+                          type="number"
+                          step="1"
+                          min="0"
+                          placeholder="e.g. 50000"
+                          value={resellerCreditLimit}
+                          onChange={(e) => setResellerCreditLimit(e.target.value)}
+                          className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
+                      <div className="bg-white p-3 rounded-xl border border-purple-200 shadow-sm flex flex-col justify-center">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Credit Used</span>
+                        <span className="text-sm font-black text-purple-900">
+                          ₹{parseFloat(selectedUser.reseller_profile?.credit_used || 0).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Business Profile Details */}
+                    <div className="bg-white p-3.5 rounded-xl border border-purple-200 shadow-sm space-y-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Business Name</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. ABC Retail Enterprises"
+                          value={resellerBusinessName}
+                          onChange={(e) => setResellerBusinessName(e.target.value)}
+                          className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 mb-1">GSTIN</label>
+                          <input
+                            type="text"
+                            placeholder="GSTIN Number"
+                            value={resellerGstin}
+                            onChange={(e) => setResellerGstin(e.target.value)}
+                            className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-mono font-medium focus:outline-none focus:border-purple-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 mb-1">PAN</label>
+                          <input
+                            type="text"
+                            placeholder="PAN Number"
+                            value={resellerPan}
+                            onChange={(e) => setResellerPan(e.target.value)}
+                            className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-mono font-medium focus:outline-none focus:border-purple-500"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Business Address</label>
+                        <textarea
+                          rows={2}
+                          placeholder="Registered commercial address"
+                          value={resellerAddress}
+                          onChange={(e) => setResellerAddress(e.target.value)}
+                          className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Reseller Application Approval Actions */}
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      {resellerStatus !== 'approved' && (
+                        <button
+                          type="button"
+                          onClick={handleApproveReseller}
+                          disabled={savingReseller}
+                          className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                        >
+                          <CheckCircle2 size={14} />
+                          Approve Reseller
+                        </button>
+                      )}
+                      {resellerStatus === 'pending' && (
+                        <button
+                          type="button"
+                          onClick={handleRejectReseller}
+                          disabled={savingReseller}
+                          className="px-3 py-2 bg-red-100 hover:bg-red-200 text-red-800 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                        >
+                          <XCircle size={14} />
+                          Reject
+                        </button>
+                      )}
+                      {resellerStatus === 'approved' && (
+                        <button
+                          type="button"
+                          onClick={handleSuspendReseller}
+                          disabled={savingReseller}
+                          className="px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                        >
+                          <Ban size={14} />
+                          Suspend Reseller
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleSaveResellerSettings()}
+                        disabled={savingReseller}
+                        className="ml-auto px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow"
+                      >
+                        <Save size={14} />
+                        {savingReseller ? 'Saving...' : 'Save Reseller Details & %'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300 flex items-center justify-between">
+                    <div>
+                      <h5 className="text-xs font-bold text-slate-800">Convert to Reseller / Set Wholesale %</h5>
+                      <p className="text-[11px] text-slate-500">Configure wholesale discount % and credit limit for this customer</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowResellerFormForCustomer(true)}
+                      className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-sm transition flex items-center gap-1"
+                    >
+                      <Briefcase size={12} />
+                      Enable Reseller
+                    </button>
+                  </div>
+                )}
 
                 {/* Metrics */}
                 <div className="grid grid-cols-2 gap-4">
@@ -618,29 +907,6 @@ export default function CustomersAndResellersPage() {
                   </div>
                 </div>
 
-                {/* Reseller Profile details if applicable */}
-                {selectedUser.reseller_profile && (
-                  <div className="space-y-3 bg-purple-50/50 p-4 rounded-xl border border-purple-200">
-                    <h5 className="text-xs font-bold text-purple-800 uppercase tracking-wider flex items-center gap-1.5">
-                      <Briefcase size={14} /> Reseller Profile Details
-                    </h5>
-                    <div className="text-xs space-y-2">
-                      <div className="flex justify-between border-b border-purple-100 pb-2">
-                        <span className="text-purple-700">Business Name:</span>
-                        <span className="font-bold text-purple-900">{selectedUser.reseller_profile.business_name || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between border-b border-purple-100 pb-2">
-                        <span className="text-purple-700">Approval Status:</span>
-                        <span className="font-bold uppercase text-purple-900">{selectedUser.reseller_profile.status}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-purple-700">Credit Limit / Used:</span>
-                        <span className="font-bold text-purple-900">₹{selectedUser.reseller_profile.credit_used} / ₹{selectedUser.reseller_profile.credit_limit}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* Saved User Addresses */}
                 <div className="space-y-3">
                   <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Saved Shipping Addresses</h5>
@@ -682,5 +948,13 @@ export default function CustomersAndResellersPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function CustomersAndResellersPage() {
+  return (
+    <Suspense fallback={<div className="p-12 text-center text-xs text-slate-400">Loading Accounts...</div>}>
+      <CustomersContent />
+    </Suspense>
   );
 }

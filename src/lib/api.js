@@ -176,20 +176,24 @@ async function refreshAdminSession() {
       if (refreshRes.ok) {
         const refreshData = await refreshRes.json();
         if (refreshData.success && refreshData.data && refreshData.data.tokens) {
-          setAdminToken(refreshData.data.tokens.accessToken || refreshData.data.tokens.access_token);
-          setAdminRefreshToken(refreshData.data.tokens.refreshToken || refreshData.data.tokens.refresh_token);
+          const newAccessToken = refreshData.data.tokens.accessToken || refreshData.data.tokens.access_token;
+          const newRefreshToken = refreshData.data.tokens.refreshToken || refreshData.data.tokens.refresh_token;
+          if (newAccessToken) setAdminToken(newAccessToken);
+          if (newRefreshToken) setAdminRefreshToken(newRefreshToken);
+          if (refreshData.data.user) setAdminProfile(refreshData.data.user);
           return true;
         }
       }
-      setAdminToken('');
-      setAdminRefreshToken('');
-      setAdminProfile(null);
+      // Only clear credentials if backend explicitly rejected the refresh token
+      if (refreshRes.status === 401 || refreshRes.status === 403) {
+        setAdminToken('');
+        setAdminRefreshToken('');
+        setAdminProfile(null);
+      }
       return false;
     } catch (e) {
-      console.error('Refresh token failed', e);
-      setAdminToken('');
-      setAdminRefreshToken('');
-      setAdminProfile(null);
+      console.error('Refresh token network/unexpected error', e);
+      // Do not wipe localStorage on transient network errors
       return false;
     } finally {
       refreshPromise = null;
@@ -199,11 +203,27 @@ async function refreshAdminSession() {
 }
 
 export async function fetchAdminApi(endpoint, options = {}, isRetry = false) {
+  // If a refresh is currently in flight, wait for it before dispatching new requests
+  if (refreshPromise && !endpoint.includes('/auth/refresh') && !endpoint.includes('/auth/login')) {
+    try {
+      await refreshPromise;
+    } catch (_) {}
+  }
+
   const token = getAdminToken();
+  const tokenSent = token;
+
+  // On retry, remove any stale Authorization headers from options so new token is used
+  const cleanOptionsHeaders = { ...(options.headers || {}) };
+  if (isRetry) {
+    delete cleanOptionsHeaders.Authorization;
+    delete cleanOptionsHeaders.authorization;
+  }
+
   const headers = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(options.headers || {})
+    ...cleanOptionsHeaders
   };
 
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
@@ -227,6 +247,13 @@ export async function fetchAdminApi(endpoint, options = {}, isRetry = false) {
     if (!response.ok) {
       // Handle Token Expiry (skip refreshing for auth endpoints)
       if (response.status === 401 && !isRetry && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/refresh')) {
+        // If another concurrent request has already refreshed the token in storage,
+        // retry immediately with the newly stored token rather than initiating a duplicate refresh.
+        const currentToken = getAdminToken();
+        if (currentToken && currentToken !== tokenSent) {
+          return fetchAdminApi(endpoint, options, true);
+        }
+
         const refreshed = await refreshAdminSession();
         if (refreshed) {
           return fetchAdminApi(endpoint, options, true);

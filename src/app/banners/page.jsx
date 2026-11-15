@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Image as ImageIcon, UploadCloud } from 'lucide-react';
 import toast from 'react-hot-toast';
-import api from '@/lib/api';
+import api, { getAdminToken } from '@/lib/api';
 
 export default function BannersPage() {
   const [banners, setBanners] = useState([]);
@@ -83,7 +83,7 @@ export default function BannersPage() {
         const baseURL = process.env.NEXT_PUBLIC_API_URL || 'https://backend.provokeplaytech.com/api/v1';
         const fullUrl = uploadUrl.startsWith('http') ? uploadUrl : baseURL.replace('/api/v1', '') + uploadUrl;
 
-        const token = localStorage.getItem('token');
+        const token = getAdminToken();
         const uploadRes = await fetch(fullUrl, {
           method: 'PUT',
           body: file,
