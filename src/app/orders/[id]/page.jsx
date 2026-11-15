@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { adminApi, downloadAdminFile } from '../../../lib/api';
 import StatusBadge from '../../../components/StatusBadge';
-import { Package, Download, Truck, Edit2, Check, AlertCircle, Plus, Save, MapPin, User, Phone, CreditCard } from 'lucide-react';
+import { Package, Download, Truck, Edit2, Check, AlertCircle, Plus, Save, MapPin, User, Phone, CreditCard, Trash2, Calendar, ExternalLink, X } from 'lucide-react';
 
 export default function AdminOrderDetailPage() {
   const { id } = useParams();
@@ -27,6 +27,16 @@ export default function AdminOrderDetailPage() {
   const [carrier, setCarrier] = useState('Express Logistics');
   const [trackingNum, setTrackingNum] = useState('');
   const [selectedShipQty, setSelectedShipQty] = useState({});
+
+  // Payment Tracker & Split Payments State
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [editingPayment, setEditingPayment] = useState(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentDate, setPaymentDate] = useState('');
+  const [adminRemarks, setAdminRemarks] = useState('');
+  const [proofUrl, setProofUrl] = useState('');
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const [submittingPayment, setSubmittingPayment] = useState(false);
 
   const [downloadingInvoice, setDownloadingInvoice] = useState(false);
   const [downloadingSlip, setDownloadingSlip] = useState(false);
@@ -73,7 +83,113 @@ export default function AdminOrderDetailPage() {
   if (loading) return <div className="p-12 text-center text-xs text-gray-400">Loading order detail...</div>;
   if (!orderData || !orderData.order) return <div className="p-12 text-center text-xs text-gray-500">Order not found.</div>;
 
-  const { order, items = [], shipments = [] } = orderData;
+  const { order, items = [], shipments = [], payments = [], payment_summary = {} } = orderData;
+  const grandTotal = parseFloat(order?.grand_total || 0);
+  const totalPaid = payment_summary.total_paid !== undefined ? payment_summary.total_paid : payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+  const pendingAmount = payment_summary.payment_pending !== undefined ? payment_summary.payment_pending : Math.max(0, grandTotal - totalPaid);
+  const percentCollected = grandTotal > 0 ? Math.min(100, Math.round((totalPaid / grandTotal) * 100)) : 0;
+
+  const handleOpenAddPayment = () => {
+    setEditingPayment(null);
+    setPaymentAmount(pendingAmount > 0 ? pendingAmount.toString() : '');
+    setPaymentDate(new Date().toISOString().slice(0, 10));
+    setAdminRemarks('');
+    setProofUrl('');
+    setShowPaymentModal(true);
+  };
+
+  const handleOpenEditPayment = (p) => {
+    setEditingPayment(p);
+    setPaymentAmount(p.amount ? p.amount.toString() : '');
+    setPaymentDate(p.payment_date ? p.payment_date.slice(0, 10) : new Date().toISOString().slice(0, 10));
+    setAdminRemarks(p.admin_remarks || '');
+    setProofUrl(p.proof_url || '');
+    setShowPaymentModal(true);
+  };
+
+  const handleProofUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingProof(true);
+    try {
+      const ext = file.name.split('.').pop() || 'png';
+      const filename = `proof-${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+      const res = await adminApi.post(`/storage/upload?key=${encodeURIComponent(`orders/payments/${filename}`)}&contentType=${encodeURIComponent(file.type)}`, {});
+
+      if (res.success && res.data?.uploadUrl) {
+        const fullUploadUrl = res.data.uploadUrl.startsWith('http')
+          ? res.data.uploadUrl
+          : adminApi.baseURL.replace('/api/v1', '') + res.data.uploadUrl;
+
+        const uploadRes = await fetch(fullUploadUrl, {
+          method: 'PUT',
+          body: file,
+          headers: { 'Content-Type': file.type }
+        });
+
+        if (uploadRes.ok) {
+          const publicUrl = res.data.fileUrl || res.data.publicUrl || res.data.url;
+          setProofUrl(publicUrl);
+          alert('Proof document uploaded successfully');
+        } else {
+          alert('Proof direct upload failed. Please try again.');
+        }
+      } else {
+        alert(res.message || 'Failed to initialize proof upload');
+      }
+    } catch (err) {
+      alert(err.message || 'Upload error');
+    } finally {
+      setUploadingProof(false);
+    }
+  };
+
+  const handleSubmitPayment = async (e) => {
+    e.preventDefault();
+    const parsedAmount = parseFloat(paymentAmount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      alert('Please enter a valid positive payment amount');
+      return;
+    }
+
+    setSubmittingPayment(true);
+    try {
+      const payload = {
+        amount: parsedAmount,
+        payment_date: paymentDate || new Date().toISOString().slice(0, 10),
+        admin_remarks: adminRemarks,
+        proof_url: proofUrl || null
+      };
+
+      const res = editingPayment
+        ? await adminApi.put(`/admin/orders/${id}/payments/${editingPayment.id}`, payload)
+        : await adminApi.post(`/admin/orders/${id}/payments`, payload);
+
+      if (res.success) {
+        alert(editingPayment ? 'Payment split updated successfully' : 'Payment split recorded successfully');
+        setShowPaymentModal(false);
+        loadDetail({ forceFresh: true });
+      } else {
+        alert(res.message || 'Failed to save payment split');
+      }
+    } catch (err) {
+      alert(err.message || 'Payment submission error');
+    } finally {
+      setSubmittingPayment(false);
+    }
+  };
+
+  const handleDeletePayment = async (paymentId) => {
+    if (!confirm('Are you sure you want to delete this payment split record?')) return;
+    const res = await adminApi.delete(`/admin/orders/${id}/payments/${paymentId}`);
+    if (res.success) {
+      alert('Payment split record deleted');
+      loadDetail({ forceFresh: true });
+    } else {
+      alert(res.message || 'Failed to delete payment split');
+    }
+  };
 
 
   const handleUpdateShipping = async () => {
@@ -406,6 +522,174 @@ export default function AdminOrderDetailPage() {
             </div>
           </div>
 
+          {/* Payment Tracker (Split Payments Manager) */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-5 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                  <CreditCard className="text-emerald-600" size={18} /> Payment Tracker (Split Payments)
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Track outside-the-website payments and split installments (NEFT / RTGS / UPI / Cash)
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleOpenAddPayment}
+                className="bg-emerald-600 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg hover:bg-emerald-700 transition flex items-center gap-1.5 shadow-xs cursor-pointer w-fit"
+              >
+                <Plus size={14} /> Record Payment Split
+              </button>
+            </div>
+
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">TOTAL ORDER VALUE</span>
+                <span className="text-base sm:text-lg font-black text-slate-900 mt-1 block">
+                  ₹{grandTotal.toLocaleString('en-IN')}
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">PAYMENT MADE</span>
+                <span className="text-base sm:text-lg font-black text-emerald-700 mt-1 block">
+                  ₹{totalPaid.toLocaleString('en-IN')}
+                </span>
+              </div>
+
+              <div className={`p-3.5 rounded-xl border ${pendingAmount > 0 ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
+                <span className={`text-[10px] font-bold uppercase tracking-wider block ${pendingAmount > 0 ? 'text-amber-800' : 'text-slate-400'}`}>
+                  PAYMENT PENDING
+                </span>
+                <span className={`text-base sm:text-lg font-black mt-1 block ${pendingAmount > 0 ? 'text-amber-800' : 'text-slate-700'}`}>
+                  ₹{pendingAmount.toLocaleString('en-IN')}
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">STATUS</span>
+                <div className="mt-1">
+                  <StatusBadge status={order?.payment_status || 'pending'} />
+                </div>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200/80">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-600 font-semibold">Collection Progress</span>
+                <span className="font-bold text-slate-900">{percentCollected}% Collected</span>
+              </div>
+              <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-300 rounded-full ${
+                    percentCollected >= 100
+                      ? 'bg-emerald-600'
+                      : percentCollected > 0
+                      ? 'bg-amber-500'
+                      : 'bg-slate-300'
+                  }`}
+                  style={{ width: `${percentCollected}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Split Payments List / Table */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Payment Split Records ({payments.length})
+              </h4>
+
+              {payments && payments.length > 0 ? (
+                <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold border-b border-slate-200">
+                      <tr>
+                        <th className="py-2.5 px-3">#</th>
+                        <th className="py-2.5 px-3">Date</th>
+                        <th className="py-2.5 px-3">Amount</th>
+                        <th className="py-2.5 px-3">Admin Remarks</th>
+                        <th className="py-2.5 px-3">Proof</th>
+                        <th className="py-2.5 px-3">Logged By</th>
+                        <th className="py-2.5 px-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {payments.map((p, idx) => (
+                        <tr key={p.id || idx} className="hover:bg-slate-50/50">
+                          <td className="py-3 px-3 font-bold text-slate-500">#{idx + 1}</td>
+                          <td className="py-3 px-3 text-slate-700 font-medium whitespace-nowrap">
+                            {new Date(p.payment_date).toLocaleDateString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric'
+                            })}
+                          </td>
+                          <td className="py-3 px-3 font-black text-emerald-700 whitespace-nowrap">
+                            ₹{parseFloat(p.amount || 0).toLocaleString('en-IN')}
+                          </td>
+                          <td className="py-3 px-3 text-slate-600 max-w-xs truncate" title={p.admin_remarks || ''}>
+                            {p.admin_remarks || <span className="text-slate-300 italic">None</span>}
+                          </td>
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            {p.proof_url ? (
+                              <a
+                                href={p.proof_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-600 hover:text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-200 transition"
+                              >
+                                <ExternalLink size={11} /> Proof
+                              </a>
+                            ) : (
+                              <span className="text-slate-300 italic text-[11px]">Optional</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3 text-slate-500 text-[11px] whitespace-nowrap">
+                            {p.recorded_by_name || 'Admin'}
+                          </td>
+                          <td className="py-3 px-3 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditPayment(p)}
+                                className="p-1 hover:bg-slate-100 rounded text-slate-600 hover:text-sky-600 transition cursor-pointer"
+                                title="Edit Split"
+                              >
+                                <Edit2 size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeletePayment(p.id)}
+                                className="p-1 hover:bg-red-50 rounded text-slate-400 hover:text-red-600 transition cursor-pointer"
+                                title="Delete Split"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-6 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200 text-xs text-slate-400 space-y-2">
+                  <CreditCard size={24} className="mx-auto text-slate-300" />
+                  <p>No split payments recorded yet for this order.</p>
+                  <button
+                    type="button"
+                    onClick={handleOpenAddPayment}
+                    className="text-emerald-600 font-bold hover:underline cursor-pointer"
+                  >
+                    + Record First Split Payment
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* §6.3 Admin Split-Shipment Manager */}
           <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
             <div className="flex justify-between items-center border-b border-slate-100 pb-3">
@@ -480,6 +764,18 @@ export default function AdminOrderDetailPage() {
               <span className="text-sm font-bold text-slate-900">Grand Total</span>
               <span className="text-sm font-black text-sky-600">₹{parseFloat(order?.grand_total || 0).toLocaleString('en-IN')}</span>
             </div>
+            {totalPaid > 0 && (
+              <div className="flex justify-between text-emerald-700 font-bold pt-1">
+                <span>Payment Made</span>
+                <span>₹{totalPaid.toLocaleString('en-IN')}</span>
+              </div>
+            )}
+            {pendingAmount > 0 && (
+              <div className="flex justify-between text-amber-700 font-bold pt-1">
+                <span>Payment Pending</span>
+                <span>₹{pendingAmount.toLocaleString('en-IN')}</span>
+              </div>
+            )}
           </div>
           <h3 className="font-bold text-slate-900 text-base border-b border-slate-100 pb-3">Order Documents</h3>
           <div className="space-y-2">
@@ -559,6 +855,131 @@ export default function AdminOrderDetailPage() {
               </button>
               <button type="submit" className="px-4 py-2 bg-sky-600 text-white rounded-lg text-xs font-bold hover:bg-sky-700">
                 Dispatch Shipment
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+      {/* Split Payment Creation & Edit Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+          <form
+            onSubmit={handleSubmitPayment}
+            className="bg-white max-w-md w-full p-6 sm:p-7 rounded-2xl shadow-2xl border border-slate-200 space-y-4"
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+                <CreditCard className="text-emerald-600" size={20} />
+                {editingPayment ? 'Edit Payment Split' : 'Record Payment Split'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowPaymentModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-3.5">
+              {/* Amount */}
+              <div>
+                <label className="text-xs font-bold text-slate-600 uppercase block mb-1">
+                  Payment Amount (₹) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  required
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  placeholder="e.g. 5000"
+                  className="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-bold bg-white text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                />
+                {pendingAmount > 0 && !editingPayment && (
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Pending balance for this order: <span className="font-bold text-amber-700">₹{pendingAmount.toLocaleString('en-IN')}</span>
+                  </p>
+                )}
+              </div>
+
+              {/* Date */}
+              <div>
+                <label className="text-xs font-bold text-slate-600 uppercase block mb-1">
+                  Payment Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={paymentDate}
+                  onChange={(e) => setPaymentDate(e.target.value)}
+                  className="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-medium bg-white text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              {/* Admin Remarks */}
+              <div>
+                <label className="text-xs font-bold text-slate-600 uppercase block mb-1">
+                  Admin Remarks / Notes
+                </label>
+                <textarea
+                  rows="2"
+                  value={adminRemarks}
+                  onChange={(e) => setAdminRemarks(e.target.value)}
+                  placeholder="e.g. 50% advance received via NEFT UTR #HDFC0012984, cash in hand, etc."
+                  className="w-full p-2.5 border border-slate-300 rounded-xl text-xs bg-white text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              {/* Proof (Optional) */}
+              <div>
+                <label className="text-xs font-bold text-slate-600 uppercase block mb-1">
+                  Payment Proof (Optional)
+                </label>
+                <div className="space-y-2">
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={handleProofUpload}
+                    disabled={uploadingProof}
+                    className="text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer"
+                  />
+                  {uploadingProof && (
+                    <p className="text-[11px] text-sky-600 animate-pulse font-medium">Uploading proof document...</p>
+                  )}
+                  <input
+                    type="text"
+                    value={proofUrl}
+                    onChange={(e) => setProofUrl(e.target.value)}
+                    placeholder="Or paste receipt URL / document link"
+                    className="w-full p-2 border border-slate-300 rounded-lg text-xs font-mono bg-white text-slate-700"
+                  />
+                  {proofUrl && (
+                    <div className="flex items-center gap-2 text-[11px] text-emerald-700 bg-emerald-50 p-2 rounded-lg border border-emerald-200">
+                      <Check size={14} className="shrink-0" />
+                      <span className="truncate flex-1">Proof attached</span>
+                      <a href={proofUrl} target="_blank" rel="noreferrer" className="underline font-bold shrink-0">Preview ↗</a>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowPaymentModal(false)}
+                className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submittingPayment}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs disabled:opacity-50 cursor-pointer"
+              >
+                {submittingPayment ? 'Saving...' : editingPayment ? 'Update Split' : 'Save Payment Split'}
               </button>
             </div>
           </form>
