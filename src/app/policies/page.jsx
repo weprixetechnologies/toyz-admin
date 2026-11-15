@@ -7,7 +7,6 @@ import {
   AlertCircle, Sparkles, RefreshCw, Layers, Globe, Shield
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import AdminLayout from '../../components/AdminLayout';
 import PolicyEditor from './PolicyEditor';
 import { adminApi } from '../../lib/api';
 
@@ -148,22 +147,19 @@ export default function PoliciesPage() {
   // If in editor view, render PolicyEditor
   if (editingPolicy) {
     return (
-      <AdminLayout>
-        <div className="max-w-7xl mx-auto py-4">
-          <PolicyEditor
-            initialPolicy={editingPolicy === 'new' ? null : editingPolicy}
-            onSave={handleSavePolicy}
-            onCancel={() => setEditingPolicy(null)}
-            saving={saving}
-          />
-        </div>
-      </AdminLayout>
+      <div className="max-w-7xl mx-auto py-4">
+        <PolicyEditor
+          initialPolicy={editingPolicy === 'new' ? null : editingPolicy}
+          onSave={handleSavePolicy}
+          onCancel={() => setEditingPolicy(null)}
+          saving={saving}
+        />
+      </div>
     );
   }
 
   return (
-    <AdminLayout>
-      <div className="max-w-7xl mx-auto space-y-6 pb-12">
+    <div className="max-w-7xl mx-auto space-y-6 pb-12">
         {/* Header Banner */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
           <div className="space-y-1">
@@ -442,6 +438,5 @@ export default function PoliciesPage() {
           </div>
         )}
       </div>
-    </AdminLayout>
   );
 }

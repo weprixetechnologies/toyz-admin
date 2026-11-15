@@ -59,8 +59,8 @@ export default function AdminProductsPage() {
           const catList = Array.isArray(catRes.data?.categories)
             ? catRes.data.categories
             : Array.isArray(catRes.data)
-            ? catRes.data
-            : [];
+              ? catRes.data
+              : [];
           setCategories(catList);
         }
 
@@ -68,8 +68,8 @@ export default function AdminProductsPage() {
           const bList = Array.isArray(brandRes.data?.brands)
             ? brandRes.data.brands
             : Array.isArray(brandRes.data)
-            ? brandRes.data
-            : [];
+              ? brandRes.data
+              : [];
           setBrands(bList);
         }
 
@@ -77,8 +77,8 @@ export default function AdminProductsPage() {
           const bdList = Array.isArray(badgeRes.data?.badges)
             ? badgeRes.data.badges
             : Array.isArray(badgeRes.data)
-            ? badgeRes.data
-            : [];
+              ? badgeRes.data
+              : [];
           setBadges(bdList);
         }
       } catch (err) {
@@ -138,8 +138,8 @@ export default function AdminProductsPage() {
       const list = Array.isArray(res.data.products)
         ? res.data.products
         : Array.isArray(res.data)
-        ? res.data
-        : [];
+          ? res.data
+          : [];
       setProducts(list);
       if (res.data.pagination) {
         setPagination(res.data.pagination);
@@ -341,11 +341,10 @@ export default function AdminProductsPage() {
           <button
             type="button"
             onClick={() => setIsFiltersOpen((prev) => !prev)}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-2 ${
-              isFiltersOpen || activeFilterCount > 0
-                ? 'bg-sky-50 border-sky-300 text-sky-700'
-                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-            }`}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-2 ${isFiltersOpen || activeFilterCount > 0
+              ? 'bg-sky-50 border-sky-300 text-sky-700'
+              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+              }`}
           >
             <Filter size={14} />
             <span>Filters</span>
@@ -410,9 +409,8 @@ export default function AdminProductsPage() {
                     return (
                       <label
                         key={c.id}
-                        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition ${
-                          isChecked ? 'bg-sky-50 text-sky-900 font-bold' : 'hover:bg-slate-50 text-slate-700'
-                        }`}
+                        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition ${isChecked ? 'bg-sky-50 text-sky-900 font-bold' : 'hover:bg-slate-50 text-slate-700'
+                          }`}
                       >
                         <input
                           type="checkbox"
@@ -614,13 +612,12 @@ export default function AdminProductsPage() {
                       className="rounded text-sky-600 focus:ring-sky-500 w-4 h-4 cursor-pointer"
                     />
                   </th>
-                  <th className="p-4">Product Details</th>
-                  <th className="p-4">SKU & Brand</th>
-                  <th className="p-4">Category</th>
-                  <th className="p-4">Price & Sale Price</th>
-                  <th className="p-4">Stock Level</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Actions</th>
+                  <th className="p-4 w-full min-w-[280px]">Product Details</th>
+                  <th className="p-4 whitespace-nowrap w-36">SKU & Brand</th>
+                  <th className="p-4 whitespace-nowrap w-36">Category</th>
+                  <th className="p-4 whitespace-nowrap w-36">Price & Sale Price</th>
+                  <th className="p-4 whitespace-nowrap w-40">Status</th>
+                  <th className="p-4 text-right whitespace-nowrap w-40">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -665,16 +662,16 @@ export default function AdminProductsPage() {
                               <ShoppingBag size={20} className="text-slate-300" />
                             )}
                           </div>
-                          <div className="space-y-1">
+                          <div className="space-y-1 min-w-0 flex-1">
                             <Link
                               href={`/products/${p.id}/edit`}
-                              className="font-bold text-slate-900 text-sm hover:text-sky-600 transition line-clamp-1"
+                              className="font-bold text-slate-900 text-sm hover:text-sky-600 transition line-clamp-2 leading-snug"
                               title={p.name}
                             >
                               {p.name}
                             </Link>
                             <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-600 whitespace-nowrap">
                                 {p.product_type || 'simple'}
                               </span>
                               {p.badges &&
@@ -685,7 +682,7 @@ export default function AdminProductsPage() {
                                       backgroundColor: b.bg_color || '#e0f2fe',
                                       color: b.text_color || '#0369a1'
                                     }}
-                                    className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded shadow-xs"
+                                    className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded shadow-xs whitespace-nowrap"
                                   >
                                     {b.badge_text || b.name}
                                   </span>
@@ -696,7 +693,7 @@ export default function AdminProductsPage() {
                       </td>
 
                       {/* SKU & Brand */}
-                      <td className="p-4 space-y-0.5">
+                      <td className="p-4 space-y-0.5 whitespace-nowrap w-36">
                         <div className="font-mono font-bold text-slate-800 text-xs">{p.sku || '-'}</div>
                         <div className="text-[11px] text-slate-500 font-medium">
                           {p.brand_name ? (
@@ -708,80 +705,75 @@ export default function AdminProductsPage() {
                       </td>
 
                       {/* Category */}
-                      <td className="p-4">
-                        <span className="inline-block px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                      <td className="p-4 whitespace-nowrap w-36">
+                        <span className="inline-block px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 whitespace-nowrap">
                           {p.category_name || 'Uncategorized'}
                         </span>
                       </td>
 
                       {/* Pricing: Base Price & Sale Price */}
-                      <td className="p-4">
-                        <div className="space-y-0.5">
+                      <td className="p-4 whitespace-nowrap w-36">
+                        <div className="space-y-0.5 whitespace-nowrap">
                           {/* Base Price */}
                           <div
-                            className={`font-black text-xs ${
-                              hasSalePrice ? 'text-slate-400 line-through' : 'text-slate-900 text-sm'
-                            }`}
+                            className={`font-black text-xs whitespace-nowrap ${hasSalePrice ? 'text-slate-400 line-through' : 'text-slate-900 text-sm'
+                              }`}
                           >
                             ₹{basePriceVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </div>
 
                           {/* Sale Price under Base Price */}
                           {hasSalePrice ? (
-                            <div className="text-xs font-black text-emerald-600 flex items-center gap-1.5">
+                            <div className="text-xs font-black text-emerald-600 flex items-center gap-1.5 whitespace-nowrap">
                               <span>
-                                Sale: ₹{salePriceVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                ₹{salePriceVal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                               </span>
                               {discountPct > 0 && (
-                                <span className="bg-emerald-100 text-emerald-800 text-[9px] font-black px-1.5 py-0.5 rounded">
+                                <span className="bg-emerald-100 text-emerald-800 text-[9px] font-black px-1.5 py-0.5 rounded whitespace-nowrap">
                                   -{discountPct}%
                                 </span>
                               )}
                             </div>
                           ) : (
-                            <div className="text-[10px] text-slate-400 font-medium">No sale price</div>
+                            <div className="text-[10px] text-slate-400 font-medium whitespace-nowrap">No sale price</div>
                           )}
                         </div>
                       </td>
 
-                      {/* Stock Qty & Status */}
-                      <td className="p-4">
-                        <div className="space-y-1">
-                          <div className="font-black text-slate-900 text-xs">
-                            {p.stock_qty || 0} pcs
-                          </div>
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                              isOutOfStock
-                                ? 'bg-red-100 text-red-800 border border-red-200'
+                      {/* Status Badge & Stock Info (Under Status) */}
+                      <td className="p-4 whitespace-nowrap w-40">
+                        <div className="flex flex-col items-start gap-1.5 whitespace-nowrap">
+                          <StatusBadge status={p.is_active ? 'active' : 'inactive'} />
+                          <div className="flex items-center gap-1.5 whitespace-nowrap">
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border whitespace-nowrap ${isOutOfStock
+                                ? 'bg-red-50 text-red-700 border-red-200'
                                 : isLowStock
-                                ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                                : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            }`}
-                          >
-                            {isOutOfStock ? 'Out of Stock' : isLowStock ? 'Low Stock' : 'In Stock'}
-                          </span>
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              }`}
+                            >
+                              {isOutOfStock ? 'Out of Stock' : isLowStock ? 'Low Stock' : 'In Stock'}
+                            </span>
+                            <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap">
+                              ({p.stock_qty || 0})
+                            </span>
+                          </div>
                         </div>
                       </td>
 
-                      {/* Status Badge */}
-                      <td className="p-4">
-                        <StatusBadge status={p.is_active ? 'active' : 'inactive'} />
-                      </td>
-
-                      {/* Action Buttons: CHANGE STATUS + Edit + Delete */}
-                      <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      {/* Action Buttons: CHANGE STATUS + Edit */}
+                      <td className="p-4 text-right whitespace-nowrap w-40">
+                        <div className="flex items-center justify-end gap-2 whitespace-nowrap">
                           {/* CHANGE STATUS BUTTON (Toggles between Inactive and Active) */}
                           <button
                             type="button"
                             onClick={() => handleToggleStatus(p.id, p.is_active)}
                             disabled={isToggling}
-                            className={`px-3 py-1.5 rounded-xl font-bold text-xs transition flex items-center gap-1.5 border shadow-2xs ${
-                              p.is_active
-                                ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
-                                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border-emerald-300'
-                            } disabled:opacity-50`}
+                            className={`px-2.5 py-1.5 rounded-xl font-bold text-xs transition flex items-center gap-1.5 border whitespace-nowrap shadow-2xs ${p.is_active
+                              ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
+                              : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border-emerald-300'
+                              } disabled:opacity-50`}
                             title={p.is_active ? 'Click to make INACTIVE' : 'Click to make ACTIVE'}
                           >
                             {isToggling ? (
@@ -835,11 +827,10 @@ export default function AdminProductsPage() {
                     <button
                       key={pageNum}
                       onClick={() => setPage(pageNum)}
-                      className={`w-7 h-7 rounded-lg font-bold text-xs transition ${
-                        page === pageNum
-                          ? 'bg-sky-600 text-white'
-                          : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                      }`}
+                      className={`w-7 h-7 rounded-lg font-bold text-xs transition ${page === pageNum
+                        ? 'bg-sky-600 text-white'
+                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                        }`}
                     >
                       {pageNum}
                     </button>
